@@ -178,7 +178,11 @@ class Twitcasting(object):
             r.close()
 
         if r.text and len(r.text) > 0 and r.text != 'null':
-            return r.json()
+            if r.headers['Content-Type'] in ['image/jpeg', 'image/png']:
+                # get_live_thumbnail_imageのとき
+                return r.content
+            else:
+                return r.json()
         else:
             return None
 
@@ -222,15 +226,62 @@ class Twitcasting(object):
             Get User Info
             ユーザー情報を取得する
             http://apiv2-doc.twitcasting.tv/#get-user-info
+
+            Parameters:
+                - user_id - ユーザーのidかscreen_id
         """
         return self._get(f'/users/{user_id}')
 
     def verify_credentials(self):
         """
             Verify Credentials
-            アクセストークンを検証し、ユーザ情報を取得する。
+            アクセストークンを検証し、ユーザ情報を取得する
             http://apiv2-doc.twitcasting.tv/#verify-credentials
-
             ※ Authorization Code GrantかImplicitでないと、エラーになる
         """
         return self._get(f'/verify_credentials')
+
+    def get_live_thumbnail_image(self, user_id, size='small', position='latest'):
+        """
+            Get Live Thumbnail Image
+            配信中のライブのサムネイル画像を取得する。
+
+            Parameters:
+                - user_id - ユーザーのidかscreen_id
+                - size - 画像サイズ. 'small' or 'large'
+                - position - ライブ開始時点か最新か. 'beginning' or 'latest'
+        """
+        return self._get(f'/users/{user_id}/live/thumbnail')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
