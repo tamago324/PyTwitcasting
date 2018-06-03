@@ -178,6 +178,8 @@ class Twitcasting(object):
             # 一応呼んでおく
             r.close()
 
+        # TODO:200以外のときはどうする？
+
         if r.text and len(r.text) > 0 and r.text != 'null':
             if r.headers['Content-Type'] in ['image/jpeg', 'image/png']:
                 # get_live_thumbnail_imageのとき
@@ -226,6 +228,7 @@ class Twitcasting(object):
         """
             Get User Info
             ユーザー情報を取得する
+            必須パーミッション: Read
 
             Parameters:
                 - user_id - ユーザーのidかscreen_id
@@ -236,6 +239,8 @@ class Twitcasting(object):
         """
             Verify Credentials
             アクセストークンを検証し、ユーザ情報を取得する
+            必須パーミッション: Read
+
             ※ Authorization Code GrantかImplicitでないと、エラーになる
         """
         return self._get(f'/verify_credentials')
@@ -244,6 +249,7 @@ class Twitcasting(object):
         """
             Get Live Thumbnail Image
             配信中のライブのサムネイル画像を取得する。
+            必須パーミッション: Read
 
             Parameters:
                 - user_id - ユーザーのidかscreen_id
@@ -256,6 +262,7 @@ class Twitcasting(object):
         """
             Get Movie Info
             ライブ（録画）情報を取得する
+            必須パーミッション: Read
 
             Parameters:
                 - movie_id - ライブID
@@ -266,6 +273,7 @@ class Twitcasting(object):
         """
             Get Movies by User
             ユーザーが保有する過去ライブ（録画）の一覧を作成日時の降順で取得する
+            必須パーミッション: Read
 
             Parameters:
                 - user_id - ユーザーのidかscreen_id
@@ -274,6 +282,65 @@ class Twitcasting(object):
         """
         return self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
 
+    def get_current_live(self, user_id):
+        """
+            Get Current Live
+            ユーザーが配信中の場合、ライブ情報を取得する
+            必須パーミッション: Read
+            ライブ中ではない場合、errorを返す← これでいいの？
+
+            Parameters:
+                - user_id - ユーザーのidかscreen_id
+        """
+        return self._get(f'/users/{user_id}/current_live')
+
+    def get_comments(self, movie_id, offset=0, limit=10, slice_id=None):
+        """
+            Get Comments
+            コメントを作成日時の降順で取得する
+            必須パーミッション: Read
+
+            Parameters:
+                - movie_id - ライブID
+                - offset - 先頭からの位置. min:0
+                - limit - 取得件数. min:1, max:50
+                - slice_id - このコメントID以降のコメントを取得する
+        """
+        params = {'offset': offset, 'limit': limit}
+
+        if slice_id is not None:
+            params['slice_id'] = slice_id
+        return self._get(f'/movies/{movie_id}/comments', **params)
+
+    def post_comment(self, movie_id, comment, sns='none'):
+        """
+            Post Comment
+            コメントを投稿する。 ユーザ単位でのみ実行可能
+            必須パーミッション: Write
+
+            Parameters:
+                - movie_id - ライブID
+                - comment - 投稿するコメント
+                - sns - SNSへの同時投稿. 'none' or 'normal' or 'reply'
+                        none: SNSへ投稿しない
+                        normal: 投稿する
+                        reply: 配信者への返信として投稿する
+        """
+        data = {'comment': comment, 'sns': sns}
+        return self._post(f'/movies/{movie_id}/comments', payload=data)
+
+    def delete_comment(self, movie_id, comment_id):
+        """
+            Delete Comment
+            コメントを削除する。ユーザ単位でのみ実行可能
+            コメント投稿者か、ライブ配信者に紐づくアクセストークンであれば削除可能
+            必須パーミッション: Write
+
+            Parameters:
+                - movie_id - ライブID
+                - comment_id - 投稿するコメント
+        """
+        return self._del(f'/movies/{movie_id}/comments/{comment_id}')
 
 
 
