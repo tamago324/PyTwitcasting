@@ -261,6 +261,18 @@ class Twitcasting(object):
         """
         return self._get(f'/movies/{movie_id}')
 
+    def get_movies_by_user(self, user_id, offset=0, limit=20):
+        """
+            Get Movies by User
+            ユーザーが保有する過去ライブ（録画）の一覧を作成日時の降順で取得する
+
+            Parameters:
+                - user_id - ユーザーのidかscreen_id
+                - offset - 先頭からの位置. min:0
+                - limit - 最大取得件数. min:1, max:50
+        """
+        return self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
+
 
 
 
