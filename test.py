@@ -11,6 +11,6 @@ if __name__ == '__main__':
     webbrowser.open(auth_url)
     response = input('リダイレクトされたURLを入力 => ')
 
-    token_info = tc_imp.parse_response_url(response)
+    token_info = tc_imp.get_access_token(response)
     print('------------------------')
     pprint(token_info)

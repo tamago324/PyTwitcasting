@@ -1,4 +1,3 @@
-# urllib.parse.pares_qs()を使えるようにするため、urllib.parseでインポートする
 import urllib.parse
 import time
 
@@ -39,7 +38,7 @@ class TwitcastingImplicit(object):
 
         return f'{OAUTH_BASE_URL}?{urlparams}'
 
-    def parse_response_url(self, url):
+    def get_access_token(self, url):
         """
         認可後にリダイレクトしたURLから認可情報を解析し取り出す
         """
