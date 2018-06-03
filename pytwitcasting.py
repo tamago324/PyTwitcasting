@@ -160,14 +160,14 @@ class Twitcasting(object):
         r = self._session.request(method, url, headers=headers, **args)
 
         try:
-            r.status_code
+            r.raise_for_status()
         except:
             # len(None)だとTypeErrorになる確認してから
             if r.text and len(r.text) > 0 and r.text != 'null':
                 err = r.json()['error']
                 # エラー内容によってdetailsがあるときとない時があるため
                 if 'details' in err:
-                    details = f"\n err['details']"
+                    details = f"\n {err['details']}"
                 else:
                     details = ''
                 raise TwitcastingException(r.status_code, err['code'], f"{r.url}:\n {err['message']}{details}")
