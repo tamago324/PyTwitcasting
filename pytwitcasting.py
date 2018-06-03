@@ -216,3 +216,11 @@ class Twitcasting(object):
         if args:
             kwargs.update(args)
         return self._internal_call('PUT', url, payload, kwargs)
+
+    def get_user_info(self, user_id):
+        """
+            Get User Info
+            ユーザー情報を取得する
+        """
+
+        return self._get(f'/users/{user_id}')
