@@ -1,4 +1,5 @@
 import base64
+import json
 import urllib.parse
 import time
 
@@ -147,7 +148,7 @@ class Twitcasting(object):
 
         args = dict(params=params)
         if payload:
-            args['data'] = payload
+            args['data'] = json.dumps(payload)
 
         # TODO: timeoutはどうするか
 
