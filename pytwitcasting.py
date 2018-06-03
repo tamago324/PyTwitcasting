@@ -1,5 +1,7 @@
 # urllib.parse.pares_qs()を使えるようにするため、urllib.parseでインポートする
 import urllib.parse
+import time
+
 import requests
 
 
@@ -37,17 +39,28 @@ class TwitcastingImplicit(object):
 
         return f'{OAUTH_BASE_URL}?{urlparams}'
 
-    def parse_response_auth_info(self, url):
+    def parse_response_url(self, url):
         """
         認可後にリダイレクトしたURLから認可情報を解析し取り出す
         """
         try:
             # URLから認可情報を取り出す
             # urllib.parse.parse_qs()を使う
-            auth_dic = urllib.parse.parse_qs(url.split('#')[1])
-            auth_info = {}
-            for k, v in auth_dic.items():
-                auth_info[k] = v[0]
-            return auth_info
+            token_info = urllib.parse.parse_qs(url.split('#')[1])
+            for k, v in token_info.items():
+                # リストの１つ目を取り出して設定
+                item = v[0]
+                token_info[k] = item
+
+            token_info = self._add_custom_values_to_token_info(token_info)
+            return token_info
         except IndexError:
             return None
+
+    def _add_custom_values_to_token_info(self, token_info):
+        """ 
+        WebAPIでは取得できない値を追加する
+        """
+        # トークンの失効日時
+        token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
+        return token_info
