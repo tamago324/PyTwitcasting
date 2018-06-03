@@ -221,6 +221,16 @@ class Twitcasting(object):
         """
             Get User Info
             ユーザー情報を取得する
+            http://apiv2-doc.twitcasting.tv/#get-user-info
         """
-
         return self._get(f'/users/{user_id}')
+
+    def verify_credentials(self):
+        """
+            Verify Credentials
+            アクセストークンを検証し、ユーザ情報を取得する。
+            http://apiv2-doc.twitcasting.tv/#verify-credentials
+
+            ※ Authorization Code GrantかImplicitでないと、エラーになる
+        """
+        return self._get(f'/verify_credentials')

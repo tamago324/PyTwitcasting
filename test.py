@@ -21,7 +21,9 @@ def implicit_test():
 if __name__ == '__main__':
     client_id = os.environ['TWITCASTING_CLIENT_ID']
     client_secret = os.environ['TWITCASTING_CLIENT_SECRET']
+    token = os.environ['ACCESS_TOKEN']
     app_basis = TwitCastingApplicationBasis(client_id, client_secret)
-    twitcas = Twitcasting(application_basis=app_basis)
+    twitcas = Twitcasting(auth=token)
 
-    print(twitcas.get_user_info('tamago324_pad'))
+    # print(twitcas.get_user_info('tamago324_pad'))
+    print(twitcas.verify_credentials())
