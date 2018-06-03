@@ -251,6 +251,17 @@ class Twitcasting(object):
         """
         return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
 
+    def get_movie_info(self, movie_id):
+        """
+            Get Movie Info
+            ライブ（録画）情報を取得する
+
+            Parameters:
+                - movie_id - ライブID
+        """
+        return self._get(f'/movies/{movie_id}')
+
+
 
 
 
