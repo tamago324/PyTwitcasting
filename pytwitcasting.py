@@ -1,3 +1,4 @@
+import base64
 import urllib.parse
 import time
 
@@ -5,6 +6,9 @@ import requests
 
 
 OAUTH_BASE_URL = 'https://apiv2.twitcasting.tv/oauth2/authorize'
+API_BASE_URL = 'https://apiv2.twitcasting.tv'
+ 
+# TODO: 認可でのExceptionクラス必要であれば
 
 class TwitcastingImplicit(object):
     """
@@ -63,3 +67,152 @@ class TwitcastingImplicit(object):
         # トークンの失効日時
         token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
         return token_info
+
+class TwitCastingApplicationBasis(object):
+    """
+        アプリケーション単位でのアクセス
+        http://apiv2-doc.twitcasting.tv/#access-token
+        なんかこれ微妙なクラスな気がする...
+    """
+    def __init__(self, client_id, client_secret):
+        self.client_id = client_id
+        self.client_secret = client_secret
+
+    def get_basic_headers(self):
+        enc = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode("utf-8")).decode('utf-8')
+        return {'Authorization': f'Basic {enc}'}
+
+
+class TwitcastingException(Exception):
+    def __init__(self, http_status, code, msg):
+        self.http_status = http_status
+        self.code = code
+        self.msg = msg
+
+    def __str__(self):
+        return f'http status: {self.http_status}, code: {self.code} {self.msg}'
+
+
+class Twitcasting(object):
+
+    def __init__(self, auth=None, requests_session=True, application_basis=None, accept_encoding=False):
+        """
+            Parameters:
+                - auth - アクセストークン
+                - requsts_session - セッションオブジェクト or セッションを使うかどうか
+                - TwitcastiongApplicationBasis - (option)
+                    TwitcastiongApplicationBasisオブジェクト
+                    (アプリケーション単位のアクセスオブジェクト)
+                - accept_encodeing - (option) レスポンスサイズが一定以上だった場合に圧縮するか
+        """
+        self._auth = auth
+        self.application_basis = application_basis
+        self.accept_encoding = accept_encoding
+        
+        if isinstance(requests_session, requests.Session):
+            # セッションを渡されたら、それを使う
+            self._session = session
+        else:
+            if requests_session:
+                # 新しくセッションを作る
+                self._session = requests.Session()
+            else:
+                # リクエストのたびに毎回セッションを生成し、閉じる(実質セッションを使っていない)
+                from requests import api
+                self._session = api
+
+    def _auth_headers(self):
+        """
+            認可情報がついたヘッダー情報を返す
+        """
+        if self._auth:
+            return {'Authorization': f'Bearer {self._auth}'}
+        elif self.application_basis:
+            return self.application_basis.get_basic_headers()
+        else:
+            return {}
+
+    def _internal_call(self, method, url, payload, params):
+        """
+            リクエストの送信
+
+            Parameters:
+                - method - リクエストの種類
+                - url - 送信先
+                - payload - POSTリクエストの送信データ
+                - params - クエリ文字列の辞書
+        """
+        if not url.startswith('http'):
+            url = API_BASE_URL + url
+
+        args = dict(params=params)
+        if payload:
+            args['data'] = payload
+
+        # TODO: timeoutはどうするか
+
+        headers = self._auth_headers()
+        headers['X-Api-Version'] = '2.0'
+        headers['Accept'] = 'application/json'
+        if self.accept_encoding:
+            headers['Accept-Encoding'] = 'gzip'
+
+        r = self._session.request(method, url, headers=headers, **args)
+
+        try:
+            r.status_code
+        except:
+            # len(None)だとTypeErrorになる確認してから
+            if r.text and len(r.text) > 0 and r.text != 'null':
+                err = r.json()['error']
+                # エラー内容によってdetailsがあるときとない時があるため
+                if 'details' in err:
+                    details = f"\n err['details']"
+                else:
+                    details = ''
+                raise TwitcastingException(r.status_code, err['code'], f"{r.url}:\n {err['message']}{details}")
+            else:
+                raise TwitcastingException(r.status_code, -1, f'r.url:\n error')
+        finally:
+            # 一応呼んでおく
+            r.close()
+
+        if r.text and len(r.text) > 0 and r.text != 'null':
+            return r.json()
+        else:
+            return None
+
+    def _get(self, url, args=None, payload=None, **kwargs):
+        """
+            GETリクエスト送信
+        """
+        if args:
+            kwargs.update(args)
+
+        # TODO:リトライ処理を入れるべき
+
+        return self._internal_call('GET', url, payload, kwargs)
+
+    def _post(self, url, args=None, payload=None, **kwargs):
+        """
+            POSTリクエスト送信
+        """
+        if args:
+            kwargs.update(args)
+        return self._internal_call('POST', url, payload, kwargs)
+
+    def _del(self, url, args=None, payload=None, **kwargs):
+        """
+            DELETEリクエスト送信
+        """
+        if args:
+            kwargs.update(args)
+        return self._internal_call('DELETE', url, payload, kwargs)
+
+    def _put(self, url, args=None, payload=None, **kwargs):
+        """
+            PUTリクエスト送信
+        """
+        if args:
+            kwargs.update(args)
+        return self._internal_call('PUT', url, payload, kwargs)
