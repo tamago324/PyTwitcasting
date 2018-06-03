@@ -225,7 +225,6 @@ class Twitcasting(object):
         """
             Get User Info
             ユーザー情報を取得する
-            http://apiv2-doc.twitcasting.tv/#get-user-info
 
             Parameters:
                 - user_id - ユーザーのidかscreen_id
@@ -236,7 +235,6 @@ class Twitcasting(object):
         """
             Verify Credentials
             アクセストークンを検証し、ユーザ情報を取得する
-            http://apiv2-doc.twitcasting.tv/#verify-credentials
             ※ Authorization Code GrantかImplicitでないと、エラーになる
         """
         return self._get(f'/verify_credentials')
@@ -251,7 +249,7 @@ class Twitcasting(object):
                 - size - 画像サイズ. 'small' or 'large'
                 - position - ライブ開始時点か最新か. 'beginning' or 'latest'
         """
-        return self._get(f'/users/{user_id}/live/thumbnail')
+        return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
 
 
 
