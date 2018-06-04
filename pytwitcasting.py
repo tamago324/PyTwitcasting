@@ -342,10 +342,114 @@ class Twitcasting(object):
         """
         return self._del(f'/movies/{movie_id}/comments/{comment_id}')
 
+    def get_supporting_status(self, user_id, target_user_id):
+        """
+            Get Supporting Status
+            ユーザーが、ある別のユーザのサポーターであるかの状態を取得する
+            必須パーミッション: Read
+            
+            Parameters:
+                - user_id - ユーザのidかscreen_id
+                - target_user_id - 状態を取得する対象のユーザのidかscreen_id
+        """
+        return self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
 
+    def support_user(self, target_user_ids):
+        """
+            Support User
+            指定したユーザーのサポーターになる
+            必須パーミッション: Write
+            
+            Parameters:
+                - target_user_ids - サポーターになるユーザのidかscreen_idのリスト
+                                    1度に20人まで可能
+        """
+        # dataとして渡す
+        data = {'target_user_ids': target_user_ids}
+        return self._put(f'/support', payload=data)
 
+    def unsupport_user(self, target_user_ids):
+        """
+            Unsupport User
+            指定したユーザーのサポーターになる
+            必須パーミッション: Write
+            
+            Parameters:
+                - target_user_ids - サポーターを解除するユーザのidかscreen_idのリスト
+                                    1度に20人まで可能
+        """
+        # dataとして渡す
+        data = {'target_user_ids': target_user_ids}
+        return self._put(f'/unsupport', payload=data)
 
+    def supporting_list(self, user_id, offset=0, limit=20):
+        """
+            Supporting List
+            指定したユーザがサポート`している`ユーザの一覧を取得する
+            必須パーミッション: Read
+            
+            Parameters:
+                - user_id - ユーザのidかscreen_id
+                - offset - 先頭からの位置. min:0
+                - limit - 最大取得件数. min:1, max:20
 
+            Return:
+                - dict - {'total': 全レコード数,
+                          'supporting': Supportingオブジェクトの配列}
+        """
+        return self._get(f'/users/{user_id}/supporting', offset=offset, limit=limit)
+
+    def supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
+        """
+            Supporting List
+            指定したユーザがサポート`している`ユーザの一覧を取得する
+            必須パーミッション: Read
+            
+            Parameters:
+                - user_id - ユーザのidかscreen_id
+                - offset - 先頭からの位置. min:0
+                - limit - 最大取得件数. min:1, max:20
+                - sort - 並び順. 'ranking'(貢献度順) or 'new'(新着順)
+
+            Return:
+                - dict - {'total': 全レコード数,
+                          'supporting': Supportingオブジェクトの配列}
+        """
+        return self._get(f'/users/{user_id}/supporters', offset=offset, limit=limit, sort=sort)
+
+    def get_categories(self, lang='ja'):
+        """
+            Get Categories
+            配信中のライブがあるカテゴリのみを取得する
+            必須パーミッション: Read
+            
+            Parameters:
+                - lang - 検索対象の言語. 'ja' or 'en'
+
+            Return:
+                - dict - {'categories': Categoryオブジェクトの配列}
+        """
+        return self._get(f'/categories', lang=lang)
+
+    def serach_users(self, words, limit=10, lang='ja'):
+        """
+            Search Users
+            ユーザを検索する
+            必須パーミッション: Read
+            
+            Parameters:
+                - words - AND検索する単語のリスト
+                - limit - 取得件数. min:1, max:50
+                - lang - 検索対象のユーザの言語設定. 現在は'ja'のみ
+                         日本語で設定しているユーザのみ検索可能
+
+            Return:
+                - dict - {'users': Userオブジェクトの配列}
+        """
+        # これじゃだめっぽい...
+        # ブラウザと一緒の結果にはならないの！？
+        w = ' '.join(words) if len(words) > 1 else words[0]
+        return self._get(f'/search/users', words=urllib.parse.quote(w), limit=limit, lang=lang)
 
 
 
