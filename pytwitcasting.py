@@ -246,7 +246,7 @@ class Twitcasting(object):
 
             ※ Authorization Code GrantかImplicitでないと、エラーになる
         """
-        return self._get(f'/verify_credentials')
+        return self._get('/verify_credentials')
 
     def get_live_thumbnail_image(self, user_id, size='small', position='latest'):
         """
@@ -313,7 +313,7 @@ class Twitcasting(object):
 
         if slice_id is not None:
             params['slice_id'] = slice_id
-        return self._get(f'/movies/{movie_id}/comments', **params)
+        return self._get(f'/movies/{movie_id}/comments', args=params)
 
     def post_comment(self, movie_id, comment, sns='none'):
         """
@@ -369,7 +369,7 @@ class Twitcasting(object):
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put(f'/support', payload=data)
+        return self._put('/support', payload=data)
 
     def unsupport_user(self, target_user_ids):
         """
@@ -383,7 +383,7 @@ class Twitcasting(object):
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put(f'/unsupport', payload=data)
+        return self._put('/unsupport', payload=data)
 
     def supporting_list(self, user_id, offset=0, limit=20):
         """
@@ -432,7 +432,7 @@ class Twitcasting(object):
             Return:
                 - dict - {'categories': Categoryオブジェクトの配列}
         """
-        return self._get(f'/categories', lang=lang)
+        return self._get('/categories', lang=lang)
 
     def serach_users(self, words, limit=10, lang='ja'):
         """
@@ -452,11 +452,140 @@ class Twitcasting(object):
         # これじゃだめっぽい...
         # ブラウザと一緒の結果にはならないの！？
         w = ' '.join(words) if len(words) > 1 else words[0]
-        return self._get(f'/search/users', words=urllib.parse.quote(w), limit=limit, lang=lang)
+        return self._get('/search/users', words=urllib.parse.quote(w), limit=limit, lang=lang)
 
+    def search_live_movies(self, search_type='tag', content=None, limit=10, lang='ja'):
+        """
+            Search Live Movies
+            配信中のライブを検索する
+            必須パーミッション: Read
+            
+            Parameters:
+                - search_type - 検索種別. 
+                                 'tag' or 'word' or 'category' or 
+                                 'new'(新着) or 'recommend'(おすすめ)
+                - content - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
+                             search_type='tag' or 'word': AND検索する単語のリスト
+                             search_type='category': サブカテゴリID
+                             search_type='new' or 'recommend': None(不要)
+                - limit - 取得件数. min:1, max:100
+                - lang - 検索対象のユーザの言語設定. 現在は'ja'のみ
 
+            Return:
+                - dict - {'movies': Movieオブジェクトの配列}
+                         `/movies/:movie_id`と同じ結果
+        """
+        params = {'type': search_type, 'limit': limit, 'lang': lang}
 
+        # search_typeによってcontentを設定
+        if search_type and content:
+            if search_type in ['tag', 'word']:
+                # TODO: これだとWebとおなじ結果にはならない
+                w = ' '.join(content) if len(content) > 1 else content[0]
+                params['content'] = urllib.parse.quote(w)
+            elif search_type in ['category']:
+                params['content'] = content
+            elif search_type in ['new', 'recommend']:
+                # 追加しない
+                pass
 
+        return self._get('/search/lives', args=params)
+
+    def get_webhook_list(self, limit=50, offset=0, user_id=None):
+        """
+            Get WebHook List
+            アプリケーションに紐づく WebHook の一覧を取得する
+            *******************************************
+            *アプリケーション単位でのみ実行可能(Basic)*
+            *******************************************
+            必須パーミッション: any
+            
+            Parameters:
+                - limit - 取得件数. min:1, max:100
+                - offset - 先頭からの位置. min:0
+                - user_id - 対象のユーザのidかscreen_id
+
+                limitとoffsetはuser_idがNoneのときのみ指定できる
+
+            Return:
+                - dict - {'all_count': 登録済みWebHook件数,
+                          'webhooks': WebHookオブジェクトの配列}
+        """
+        params = {}
+        if user_id:
+            params['user_id'] = user_id
+        else:
+            params['limit'] = limit
+            params['offset'] = offset
+        return self._get('/webhooks', args=params)
+
+    def register_webhook(self, user_id, events):
+        """
+            Register WebHook
+            WebHookを新規登録します
+            これを使うには、アプリケーションでWebHook URLの登録が必須
+            必須パーミッション: any
+            
+            Parameters:
+                - user_id - 対象のユーザのidかscreen_id
+                - events - フックするイベント種別の配列
+                            'livestart', 'liveend'
+
+            Return:
+                - dict - {'user_id': 登録したユーザのid,
+                          'added_events': 登録したイベントの種類の配列}
+        """
+        data = {'user_id': user_id, 'events': events}
+        # そのまま渡す
+        return self._post('/webhooks', json_data=data)
+
+    def remove_webhook(self, user_id, events):
+        """
+            Remove WebHook
+            WebHookを削除する
+            必須パーミッション: any
+            
+            Parameters:
+                - user_id - 対象のユーザのidかscreen_id
+                - events - フックを削除するイベント種別の配列
+                            'livestart', 'liveend'
+
+            Return:
+                - dict - {'user_id': 登録したユーザのid,
+                          'removed_events': 削除されたイベントの種類の配列}
+        """
+        params = {'user_id': user_id, 'events[]': events}
+        return self._del('/webhooks', args=params)
+    
+    def get_rtmp_url(self):
+        """
+            Get RTMP Url
+            アクセストークンに紐づくユーザの配信用のURL(RTMP)を取得する
+            *******************************
+            *必須パーミッション: Broadcast*
+            *******************************
+
+            Return:
+                - dict - {'enabled': RTMP配信が有効かどうか,
+                          'url': RTMP配信用URL,
+                          'stream_key': RTMP配信用キー}
+        """
+        return self._get('/rtmp_url')
+
+    def get_webm_url(self):
+        """
+            Get WebM Url
+            アクセストークンに紐づくユーザの配信用のURL (WebM, WebSocket)を取得する
+            *******************************
+            *必須パーミッション: Broadcast*
+            *******************************
+
+            Return:
+                - dict - {'enabled': WebM配信が有効かどうか,
+                          'url': WebM配信用URL}
+        """
+        # (WebMってなに！？)
+        return self._get('/webm_url')
 
 
 

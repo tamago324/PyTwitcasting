@@ -2,7 +2,9 @@
 
 ツイキャスのAPI(TwitCastingのAPIv2(β))と通信するためのライブラリ
 
-https://github.com/PyGithub/PyGithub とか https://github.com/plamere/spotipy とかを参考に作っていこう  
-他にもWebAPIを扱うライブラリがあったらそれらも参考にしていく
+https://github.com/plamere/spotipy を参考に書いている
 
-GitHubのAPIは数が多いから、ソースの量が多いからPyGithubだと参考にしづらい部分があるかも？
+以下のメソッドはうまく動かない
+
+- `search_uesrs()`
+- `search_live_movies()`
