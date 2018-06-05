@@ -133,7 +133,7 @@ class Twitcasting(object):
         else:
             return {}
 
-    def _internal_call(self, method, url, payload, params):
+    def _internal_call(self, method, url, payload, json_data, params):
         """
             リクエストの送信
 
@@ -141,6 +141,7 @@ class Twitcasting(object):
                 - method - リクエストの種類
                 - url - 送信先
                 - payload - POSTリクエストの送信データ
+                - json_data - POSTリクエストのJSONで送りたいデータ
                 - params - クエリ文字列の辞書
         """
         if not url.startswith('http'):
@@ -149,6 +150,8 @@ class Twitcasting(object):
         args = dict(params=params)
         if payload:
             args['data'] = json.dumps(payload)
+        if json_data:
+            args['json'] = json_data
 
         # TODO: timeoutはどうするか
 
@@ -198,15 +201,15 @@ class Twitcasting(object):
 
         # TODO:リトライ処理を入れるべき
 
-        return self._internal_call('GET', url, payload, kwargs)
+        return self._internal_call('GET', url, payload, None, kwargs)
 
-    def _post(self, url, args=None, payload=None, **kwargs):
+    def _post(self, url, args=None, payload=None, json_data=None, **kwargs):
         """
             POSTリクエスト送信
         """
         if args:
             kwargs.update(args)
-        return self._internal_call('POST', url, payload, kwargs)
+        return self._internal_call('POST', url, payload, json_data, kwargs)
 
     def _del(self, url, args=None, payload=None, **kwargs):
         """
@@ -214,7 +217,7 @@ class Twitcasting(object):
         """
         if args:
             kwargs.update(args)
-        return self._internal_call('DELETE', url, payload, kwargs)
+        return self._internal_call('DELETE', url, payload, None, kwargs)
 
     def _put(self, url, args=None, payload=None, **kwargs):
         """
@@ -222,7 +225,7 @@ class Twitcasting(object):
         """
         if args:
             kwargs.update(args)
-        return self._internal_call('PUT', url, payload, kwargs)
+        return self._internal_call('PUT', url, payload, None, kwargs)
 
     def get_user_info(self, user_id):
         """
