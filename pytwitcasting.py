@@ -69,7 +69,7 @@ class TwitcastingImplicit(object):
         token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
         return token_info
 
-class TwitCastingApplicationBasis(object):
+class TwitcastingApplicationBasis(object):
     """
         アプリケーション単位でのアクセス
         http://apiv2-doc.twitcasting.tv/#access-token
