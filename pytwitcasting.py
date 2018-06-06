@@ -9,7 +9,9 @@ import requests
 OAUTH_BASE_URL = 'https://apiv2.twitcasting.tv/oauth2/authorize'
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
  
-# TODO: 認可でのExceptionクラス必要であれば
+class TwitcastingError(Exception):
+    pass
+
 
 class TwitcastingImplicit(object):
     """
