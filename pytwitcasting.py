@@ -316,8 +316,11 @@ class Twitcasting(object):
 
         if r.text and len(r.text) > 0 and r.text != 'null':
             if r.headers['Content-Type'] in ['image/jpeg', 'image/png']:
-                # get_live_thumbnail_imageのとき
-                return r.content
+                # 拡張子の取得
+                file_ext = r.headers['Content-Type'].replace('image/', '')
+                ret = {'bytes_data': r.content,
+                       'file_ext': file_ext}
+                return ret
             else:
                 return r.json()
         else:
@@ -398,7 +401,8 @@ class Twitcasting(object):
                 - position - ライブ開始時点か最新か. 'beginning' or 'latest'
 
             Return:
-                画像データ
+                - dict - {'bytes_data': サムネイルの画像データ(bytes),
+                          'file_ext': ファイル拡張子('jepg' or 'png')}
         """
         return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
 
