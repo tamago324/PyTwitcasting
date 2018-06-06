@@ -48,16 +48,27 @@ class TwitcastingImplicit(object):
 
     def get_access_token(self, url):
         """
-        認可後にリダイレクトしたURLから認可情報を解析し取り出す
+            認可後にリダイレクトしたURLから認可情報を解析し取り出す
+
+            Parameters:
+                - url - リダイレクトされたURL
+
+            Return:
+                トークンの情報
         """
         try:
             # URLから認可情報を取り出す
             # urllib.parse.parse_qs()を使う
             token_info = urllib.parse.parse_qs(url.split('#')[1])
             for k, v in token_info.items():
-                # リストの１つ目を取り出して設定
                 item = v[0]
                 token_info[k] = item
+
+            # CSRFの比較
+            if self.state:
+                r_state = token_info.get('state', None)
+                if r_state is None or not self.state == r_state:
+                    raise TwitcastingError('Invalid CSRF token')
 
             token_info = self._add_custom_values_to_token_info(token_info)
             return token_info
