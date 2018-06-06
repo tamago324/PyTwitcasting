@@ -221,7 +221,7 @@ class TwitcastingException(Exception):
 
 class Twitcasting(object):
 
-    def __init__(self, auth=None, requests_session=True, application_basis=None, accept_encoding=False):
+    def __init__(self, auth=None, requests_session=True, application_basis=None, accept_encoding=False, requests_timeout=None):
         """
             Parameters:
                 - auth - アクセストークン
@@ -230,10 +230,12 @@ class Twitcasting(object):
                     TwitcastiongApplicationBasisオブジェクト
                     (アプリケーション単位のアクセスオブジェクト)
                 - accept_encodeing - (option) レスポンスサイズが一定以上だった場合に圧縮するか
+                - requests_timeout - タイムアウト時間
         """
         self._auth = auth
         self.application_basis = application_basis
         self.accept_encoding = accept_encoding
+        self.requests_timeout = requests_timeout
         
         if isinstance(requests_session, requests.Session):
             # セッションを渡されたら、それを使う
@@ -279,6 +281,7 @@ class Twitcasting(object):
             url = API_BASE_URL + url
 
         args = dict(params=params)
+        args['timeout'] = self.requests_timeout
         if payload:
             args['data'] = json.dumps(payload)
         if json_data:
