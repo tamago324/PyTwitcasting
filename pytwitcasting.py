@@ -7,6 +7,7 @@ import requests
 
 
 OAUTH_BASE_URL = 'https://apiv2.twitcasting.tv/oauth2/authorize'
+OAUTH_TOKEN_URL = 'https://apiv2.twitcasting.tv/oauth2/access_token'
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
  
 class TwitcastingError(Exception):
@@ -84,6 +85,99 @@ class TwitcastingApplicationBasis(object):
     def get_basic_headers(self):
         enc = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode("utf-8")).decode('utf-8')
         return {'Authorization': f'Basic {enc}'}
+
+class TwitcastingOauth(object):
+    """
+        Authorization Code Grantの認可フロー
+        http://apiv2-doc.twitcasting.tv/#authorization-code-grant
+    """
+
+    def __init__(self, client_id, client_secret, redirect_uri, state=None):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.redirect_uri = redirect_uri
+        self.state = state
+
+    def get_authorize_url(self, state=None):
+        """
+            認可のためのURLを取得
+
+            Parameters:
+                - state - CSRFトークン
+
+            Return:
+                認可するためのURL
+        """
+        payload = {'client_id': self.client_id,
+                   'response_type': 'code'}
+
+        if state is None:
+            state = self.state
+        if state is not None:
+            payload['state'] = state
+
+        urlparams = urllib.parse.urlencode(payload)
+
+        return f'{OAUTH_BASE_URL}?{urlparams}'
+
+    def parse_response_code(self, url):
+        """
+            認可後にリダイレクトしたURLから認可情報を解析し取り出す
+
+            Parameters:
+                - url - リダイレクトされたURL
+        """
+        try:
+            qry = url.split('?code=')[1].split('&')
+
+            # CSRFトークンの確認
+            if self.state:
+                qry_state = qry[1].split('state=')[1]
+                if not self.state == qry_state:
+                    raise TwitcastingError('Invalid CSRF token')
+            code = qry[0]
+            return code
+        except IndexError:
+            return None
+
+    def get_access_token(self, code):
+        """
+            コードを使って、アクセストークンを取得する
+
+            Parameters:
+                - code - 取得したコード
+
+            Return:
+                認可情報
+        """
+        payload = {'code': code, 
+                   'grant_type': 'authorization_code',
+                   'client_id': self.client_id,
+                   'client_secret': self.client_secret,
+                   'redirect_uri': self.redirect_uri}
+
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+        # TODO: proxiesがなんなのかわかんない...
+        res = requests.post(OAUTH_TOKEN_URL, data=payload, headers=headers)
+
+        if res.status_code != 200:
+            raise TwitcastingError(res.reason)
+
+        token_info = res.json()
+        token_info = self._add_custom_values_to_token_info(token_info)
+        return token_info
+
+    def _add_custom_values_to_token_info(self, token_info):
+        """ 
+            WebAPIでは取得できない値を追加する
+
+            Parameters:
+                - token_info - WebAPIから取得した認可情報
+        """
+        # トークンの失効日時
+        token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
+        return token_info
 
 
 class TwitcastingException(Exception):
