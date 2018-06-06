@@ -23,7 +23,7 @@ class TwitcastingImplicit(object):
     def __init__(self, client_id, state=None):
         """
         Parameters:
-             = client_id - このアプリのclient id
+             - client_id - このアプリのclient id
              - state - このアプリのCSRFトークン
         """
         self.client_id = client_id
@@ -31,7 +31,13 @@ class TwitcastingImplicit(object):
 
     def get_authorize_url(self, state=None):
         """
-        認可のためのURLを取得
+            認可のためのURLを取得
+
+            Parameters:
+                - state - CSRFトークン
+
+            Return:
+                認可するためのURL
         """
 
         payload = {'client_id': self.client_id,
@@ -77,7 +83,13 @@ class TwitcastingImplicit(object):
 
     def _add_custom_values_to_token_info(self, token_info):
         """ 
-        WebAPIでは取得できない値を追加する
+            WebAPIでは取得できない値を追加する
+
+            Parameters:
+                - token_info - WebAPIから取得した認可情報
+
+            Return:
+                情報が追加されたtoken_info
         """
         # トークンの失効日時
         token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
@@ -137,6 +149,9 @@ class TwitcastingOauth(object):
 
             Parameters:
                 - url - リダイレクトされたURL
+
+            Return:
+                アクセストークン取得コード
         """
         try:
             qry = url.split('?code=')[1].split('&')
@@ -185,6 +200,9 @@ class TwitcastingOauth(object):
 
             Parameters:
                 - token_info - WebAPIから取得した認可情報
+
+            Return:
+                情報が追加されたtoken_info
         """
         # トークンの失効日時
         token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
@@ -232,6 +250,9 @@ class Twitcasting(object):
     def _auth_headers(self):
         """
             認可情報がついたヘッダー情報を返す
+
+            Return:
+                認可情報がついたヘッダー
         """
         if self._auth:
             return {'Authorization': f'Bearer {self._auth}'}
@@ -250,6 +271,9 @@ class Twitcasting(object):
                 - payload - POSTリクエストの送信データ
                 - json_data - POSTリクエストのJSONで送りたいデータ
                 - params - クエリ文字列の辞書
+
+            Return:
+                呼び出したAPIの結果
         """
         if not url.startswith('http'):
             url = API_BASE_URL + url
@@ -342,6 +366,9 @@ class Twitcasting(object):
 
             Parameters:
                 - user_id - ユーザーのidかscreen_id
+
+            Return:
+                - dict - {'user': Userオブジェクト}
         """
         return self._get(f'/users/{user_id}')
 
@@ -352,6 +379,10 @@ class Twitcasting(object):
             必須パーミッション: Read
 
             ※ Authorization Code GrantかImplicitでないと、エラーになる
+
+            Return:
+                - dict - {'app': アクセストークンに紐づくAppオブジェクト,
+                          'user': アクセストークンに紐づくUserオブジェクト}
         """
         return self._get('/verify_credentials')
 
@@ -365,6 +396,9 @@ class Twitcasting(object):
                 - user_id - ユーザーのidかscreen_id
                 - size - 画像サイズ. 'small' or 'large'
                 - position - ライブ開始時点か最新か. 'beginning' or 'latest'
+
+            Return:
+                画像データ
         """
         return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
 
@@ -376,6 +410,11 @@ class Twitcasting(object):
 
             Parameters:
                 - movie_id - ライブID
+
+            Return:
+                - dict - {'movie': Movieオブジェクト,
+                          'broadcaster': 配信者のUserオブジェクト,
+                          'tags': 設定されているタグの配列}
         """
         return self._get(f'/movies/{movie_id}')
 
@@ -389,6 +428,10 @@ class Twitcasting(object):
                 - user_id - ユーザーのidかscreen_id
                 - offset - 先頭からの位置. min:0
                 - limit - 最大取得件数. min:1, max:50
+
+            Return:
+                - dict - {'total_count': offset,limitの条件での総件数,
+                          'movies': Movieオブジェクトの配列}
         """
         return self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
 
@@ -397,11 +440,16 @@ class Twitcasting(object):
             Get Current Live
             ユーザーが配信中の場合、ライブ情報を取得する
             必須パーミッション: Read
-            ライブ中ではない場合、errorを返す← これでいいの？
 
             Parameters:
                 - user_id - ユーザーのidかscreen_id
+
+            Return:
+                - dict - {'movie': Movieオブジェクト,
+                          'broadcaster': 配信者のUserオブジェクト,
+                          'tags': 設定されているタグの配列}
         """
+        # TODO: ライブ中ではない場合、エラーを返すでよいのか
         return self._get(f'/users/{user_id}/current_live')
 
     def get_comments(self, movie_id, offset=0, limit=10, slice_id=None):
@@ -415,6 +463,11 @@ class Twitcasting(object):
                 - offset - 先頭からの位置. min:0
                 - limit - 取得件数. min:1, max:50
                 - slice_id - このコメントID以降のコメントを取得する
+
+            Return:
+                - dict - {'movie_id': ライブID,
+                          'all_count': 総コメント数,
+                          'comments': Commentオブジェクトの配列}
         """
         params = {'offset': offset, 'limit': limit}
 
@@ -435,6 +488,11 @@ class Twitcasting(object):
                         none: SNSへ投稿しない
                         normal: 投稿する
                         reply: 配信者への返信として投稿する
+
+            Return:
+                - dict - {'movie_id': ライブID,
+                          'all_count': 総コメント数,
+                          'comment': Commentオブジェクト}
         """
         data = {'comment': comment, 'sns': sns}
         return self._post(f'/movies/{movie_id}/comments', payload=data)
@@ -449,6 +507,9 @@ class Twitcasting(object):
             Parameters:
                 - movie_id - ライブID
                 - comment_id - 投稿するコメント
+
+            Return:
+                - dict - {'comment_id': 削除したコメントID}
         """
         return self._del(f'/movies/{movie_id}/comments/{comment_id}')
 
@@ -461,6 +522,10 @@ class Twitcasting(object):
             Parameters:
                 - user_id - ユーザのidかscreen_id
                 - target_user_id - 状態を取得する対象のユーザのidかscreen_id
+
+            Return:
+                - dict - {'is_supporting': サポーターかどうか,
+                          'target_user': 対象ユーザのUserオブジェクト}
         """
         return self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
 
@@ -473,6 +538,9 @@ class Twitcasting(object):
             Parameters:
                 - target_user_ids - サポーターになるユーザのidかscreen_idのリスト
                                     1度に20人まで可能
+
+            Return:
+                - dict - {'added_count': サポーター登録を行った件数}
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
@@ -487,6 +555,9 @@ class Twitcasting(object):
             Parameters:
                 - target_user_ids - サポーターを解除するユーザのidかscreen_idのリスト
                                     1度に20人まで可能
+
+            Return:
+                - dict - {'removed_count': サポーター解除を行った件数}
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
