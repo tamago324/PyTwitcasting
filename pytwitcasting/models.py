@@ -9,14 +9,14 @@ class Model(object):
         self._api = api
 
     @classmethod
-    def parse(self, api, json):
+    def parse(cls, api, json):
         """
             ModelParserから呼ばれるときに、APIMethod.apiが渡されていた
         """
         raise NotImplementedError
 
     @classmethod
-    def parse_list(self, api, json_list):
+    def parse_list(cls, api, json_list):
         results = list()
         for obj in json_list:
             if obj:
@@ -27,31 +27,12 @@ class Model(object):
     # XXX: Pickleするかどうか
 
 
-# class Status(Model):
-#
-#     @classmethod
-#     def parse(cls, api, json):
-#         status = cls(api)
-#         setattr(status, '_json', json)
-#
-#         for k, v in json:
-#             if k == 'created':
-#                 setattr(user, k, parse_datetime(v))
-#             elif k == 'user':
-#                 setattr(user, k, User.parse(v))
-#             else:
-#                 setattr(user, k, v)
-#
-#         return status
-
 class User(Model):
 
     @classmethod
     def parse(cls, api, json):
         user = cls(api)
         setattr(user, '_json', json)
-        print(type(json))
-        pprint(json)
 
         for k, v in json.items():
             if k == 'created':
@@ -61,23 +42,23 @@ class User(Model):
 
         return user
 
-    def get_live_thumbnail_image(self):
-        pass
+    def get_live_thumbnail_image(self, **kwargs):
+        return self._api.get_live_thumbnail_image(user_id=self.id, **kwargs)
 
-    def get_movies(self):
-        pass
+    def get_movies(self, **kwargs):
+        return self._api.get_movies_by_user(user_id=self.id, **kwargs)
 
     def get_current_live(self):
-        pass
+        return self._api.get_current_live(user_id=self.id)
 
-    def get_supporting_status(self):
-        pass
+    def get_supporting_status(self, id):
+        return self._api.get_supporting_status(user_id=self.id, target_user_id=id)
 
-    def get_supporting_list(self):
-        pass
+    def get_supporting_list(self, **kwargs):
+        return self._api.get_supporting_list(user_id=self.id, **kwargs)
 
-    def get_supporter_list(self):
-        pass
+    def get_supporter_list(self, **kwargs):
+        return self._api.get_supporter_list(user_id=self.id, **kwargs)
 
 
 class App(Model):
@@ -143,16 +124,6 @@ class Comment(Model):
         pass
 
 
-class SupporterUser(User):
-    """
-        Userとほぼ同じため、Userを継承する？
-    """
-
-    @classmethod
-    def parse(cls, api, json):
-        pass
-
-
 class Category(Model):
 
     @classmethod
@@ -184,7 +155,6 @@ class ModelFactory(object):
     app = App
     movie = Movie
     comment = Comment
-    supporter_user = SupporterUser
     category = Category
     sub_catetgory = SubCategory
     webhook = WebHook

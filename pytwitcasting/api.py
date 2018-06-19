@@ -207,11 +207,8 @@ class API(object):
                 - dict - {'bytes_data': サムネイルの画像データ(bytes),
                           'file_ext': ファイル拡張子('jepg' or 'png')}
         """
-        return self._get(f'/users/{user_id}/live/thumbnail',
-                         parse_type=None,
-                         parse_list=None,
-                         size=size, 
-                         position=position)
+        return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
+        
 
     def get_movie_info(self, movie_id):
         """
@@ -223,8 +220,8 @@ class API(object):
                 - movie_id - ライブID
 
             Return:
-                - dict - {'movie': Movieオブジェクト,
-                          'broadcaster': 配信者のUserオブジェクト,
+                - dict - {'movie': Movie,
+                          'broadcaster': 配信者のUser,
                           'tags': 設定されているタグの配列}
         """
         return self._get(f'/movies/{movie_id}')
@@ -242,9 +239,14 @@ class API(object):
 
             Return:
                 - dict - {'total_count': offset,limitの条件での総件数,
-                          'movies': Movieオブジェクトの配列}
+                          'movies': Movieの配列}
         """
-        return self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
+        res = self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
+        # 配列からMovieクラスの配列を作る
+        parser = ModelParser()
+        res['movies'] = parser.parse(self, res['movies'], parse_type='movie', payload_list=True)
+
+        return res
 
     def get_current_live(self, user_id):
         """
@@ -257,11 +259,16 @@ class API(object):
 
             Return:
                 - dict - {'movie': Movieオブジェクト,
-                          'broadcaster': 配信者のUserオブジェクト,
+                          'user': 配信者のUser,
                           'tags': 設定されているタグの配列}
         """
         # TODO: ライブ中ではない場合、エラーを返すでよいのか
-        return self._get(f'/users/{user_id}/current_live')
+        res = self._get(f'/users/{user_id}/current_live')
+        parser = ModelParser()
+        res['movie'] = parser.parse(self, res['movie'], parse_type='movie', payload_list=False)
+        res['user'] = parser.parse(self, res['broadcaster'], parse_type='user', payload_list=False)
+        del res['broadcaster']
+        return res
 
     def get_comments(self, movie_id, offset=0, limit=10, slice_id=None):
         """
@@ -336,9 +343,13 @@ class API(object):
 
             Return:
                 - dict - {'is_supporting': サポーターかどうか,
-                          'target_user': 対象ユーザのUserオブジェクト}
+                          'user': 対象ユーザのUser}
         """
-        return self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
+        res = self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
+        parser = ModelParser()
+        res['user'] = parser.parse(self, res['target_user'], parse_type='user', payload_list=False)
+        del res['target_user']
+        return res
 
     def support_user(self, target_user_ids):
         """
@@ -374,7 +385,7 @@ class API(object):
         data = {'target_user_ids': target_user_ids}
         return self._put('/unsupport', payload=data)
 
-    def supporting_list(self, user_id, offset=0, limit=20):
+    def get_supporting_list(self, user_id, offset=0, limit=20):
         """
             Supporting List
             指定したユーザがサポート`している`ユーザの一覧を取得する
@@ -387,11 +398,15 @@ class API(object):
 
             Return:
                 - dict - {'total': 全レコード数,
-                          'supporting': Supportingオブジェクトの配列}
+                          'users': Userの配列}
         """
-        return self._get(f'/users/{user_id}/supporting', offset=offset, limit=limit)
+        res = self._get(f'/users/{user_id}/supporting', offset=offset, limit=limit)
+        parser = ModelParser()
+        res['users'] = parser.parse(self, res['supporting'], parse_type='user', payload_list=True)
+        del res['supporting']
+        return res
 
-    def supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
+    def get_supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
         """
             Supporting List
             指定したユーザがサポート`している`ユーザの一覧を取得する
@@ -405,9 +420,13 @@ class API(object):
 
             Return:
                 - dict - {'total': 全レコード数,
-                          'supporting': Supportingオブジェクトの配列}
+                          'users': Userの配列}
         """
-        return self._get(f'/users/{user_id}/supporters', offset=offset, limit=limit, sort=sort)
+        res = self._get(f'/users/{user_id}/supporters', offset=offset, limit=limit, sort=sort)
+        parser = ModelParser()
+        res['users'] = parser.parse(self, res['supporters'], parse_type='user', payload_list=True)
+        del res['supporters']
+        return res
 
     def get_categories(self, lang='ja'):
         """
