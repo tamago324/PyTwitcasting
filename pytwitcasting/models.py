@@ -107,21 +107,32 @@ class Movie(Model):
 
         return movie
 
-    def get_comments(self):
-        pass
+    def get_comments(self, **kwargs):
+        return self._api.get_comments(movie_id=self.id, **kwargs)
 
-    def post_comments(self):
-        pass
+    def post_comment(self, comment, **kwargs):
+        return self._api.post_comment(movie_id=self.id, comment=comment, **kwargs)
 
-    def delete_comments(self):
-        pass
+    def delete_comment(self, comment_id):
+        return self._api.delete_comment(movie_id=self.id, comment_id=comment_id)
 
 
 class Comment(Model):
 
     @classmethod
     def parse(cls, api, json):
-        pass
+        comment = cls(api)
+        setattr(comment, '_json', json)
+
+        for k, v in json.items():
+            if k == 'created':
+                setattr(comment, k, parse_datetime(v))
+            elif k == 'from_user':
+                setattr(comment, k, User.parse(api, v))
+            else:
+                setattr(comment, k, v)
+
+        return comment
 
 
 class Category(Model):

@@ -285,13 +285,19 @@ class API(object):
             Return:
                 - dict - {'movie_id': ライブID,
                           'all_count': 総コメント数,
-                          'comments': Commentオブジェクトの配列}
+                          'comments': Commentの配列}
         """
         params = {'offset': offset, 'limit': limit}
 
-        if slice_id is not None:
+        if slice_id:
             params['slice_id'] = slice_id
-        return self._get(f'/movies/{movie_id}/comments', args=params)
+
+        res = self._get(f'/movies/{movie_id}/comments', args=params)
+        parser = ModelParser()
+        res['comments'] = parser.parse(self, res['comments'], parse_type='comment', payload_list=True)
+
+        return res
+
 
     def post_comment(self, movie_id, comment, sns='none'):
         """
@@ -310,10 +316,13 @@ class API(object):
             Return:
                 - dict - {'movie_id': ライブID,
                           'all_count': 総コメント数,
-                          'comment': Commentオブジェクト}
+                          'comment': 投稿したComment}
         """
         data = {'comment': comment, 'sns': sns}
-        return self._post(f'/movies/{movie_id}/comments', payload=data)
+        res = self._post(f'/movies/{movie_id}/comments', payload=data)
+        parser = ModelParser()
+        res['comment'] = parser.parse(self, res['comment'], parse_type='comment', payload_list=False)
+        return res
 
     def delete_comment(self, movie_id, comment_id):
         """
@@ -327,9 +336,10 @@ class API(object):
                 - comment_id - 投稿するコメント
 
             Return:
-                - dict - {'comment_id': 削除したコメントID}
+                - 削除したコメントID
         """
-        return self._del(f'/movies/{movie_id}/comments/{comment_id}')
+        res = self._del(f'/movies/{movie_id}/comments/{comment_id}')
+        return res['comment_id']
 
     def get_supporting_status(self, user_id, target_user_id):
         """
