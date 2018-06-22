@@ -226,7 +226,11 @@ class API(object):
                           'broadcaster': 配信者のUser,
                           'tags': 設定されているタグの配列}
         """
-        return self._get(f'/movies/{movie_id}')
+        res = self._get(f'/movies/{movie_id}')
+        parser = ModelParser()
+        res['movie'] = parser.parse(self, payload=res['movie'], parse_type='movie', payload_list=False)
+        res['broadcaster'] = parser.parse(self, payload=res['broadcaster'], parse_type='user', payload_list=False)
+        return res
 
     def get_movies_by_user(self, user_id, offset=0, limit=20):
         """
