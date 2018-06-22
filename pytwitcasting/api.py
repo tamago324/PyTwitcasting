@@ -185,12 +185,14 @@ class API(object):
             ※ Authorization Code GrantかImplicitでないと、エラーになる
 
             Return:
-                - dict - {'app': アクセストークンに紐づくAppオブジェクト,
-                          'user': アクセストークンに紐づくUserオブジェクト}
+                - dict - {'app': アクセストークンに紐づくApp,
+                          'user': アクセストークンに紐づくUser}
         """
-        return self._get('/verify_credentials', 
-                         parse_type='credentials',
-                         parse_list=False)
+        res = self._get('/verify_credentials')
+        parser = ModelParser()
+        res['app'] = parser.parse(self, payload=res['app'], parse_type='app', payload_list=False)
+        res['user'] = parser.parse(self, payload=res['user'], parse_type='user', payload_list=False)
+        return res
 
     def get_live_thumbnail_image(self, user_id, size='small', position='latest'):
         """
