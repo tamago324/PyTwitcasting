@@ -378,11 +378,12 @@ class API(object):
                                     1度に20人まで可能
 
             Return:
-                - dict - {'added_count': サポーター登録を行った件数}
+                サポーター登録を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put('/support', payload=data)
+        res = self._put('/support', payload=data)
+        return res['added_count'] if res else None
 
     def unsupport_user(self, target_user_ids):
         """
@@ -395,11 +396,12 @@ class API(object):
                                     1度に20人まで可能
 
             Return:
-                - dict - {'removed_count': サポーター解除を行った件数}
+                サポーター解除を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put('/unsupport', payload=data)
+        res = self._put('/unsupport', payload=data)
+        return res['removed_count'] if res else None
 
     def get_supporting_list(self, user_id, offset=0, limit=20):
         """
