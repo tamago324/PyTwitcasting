@@ -5,223 +5,18 @@ import time
 
 import requests
 
+from pytwitcasting.error import TwitcastingException
+from pytwitcasting.parsers import RawParser, ModelParser
+from pprint import pprint
 
-OAUTH_BASE_URL = 'https://apiv2.twitcasting.tv/oauth2/authorize'
-OAUTH_TOKEN_URL = 'https://apiv2.twitcasting.tv/oauth2/access_token'
+
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
  
-class TwitcastingError(Exception):
-    pass
 
+class API(object):
 
-class TwitcastingImplicit(object):
-    """
-    Implicitでの認可フロー
-    http://apiv2-doc.twitcasting.tv/#implicit
-    """
-
-    def __init__(self, client_id, state=None):
-        """
-        Parameters:
-             - client_id - このアプリのclient id
-             - state - このアプリのCSRFトークン
-        """
-        self.client_id = client_id
-        self.state = state
-
-    def get_authorize_url(self, state=None):
-        """
-            認可のためのURLを取得
-
-            Parameters:
-                - state - CSRFトークン
-
-            Return:
-                認可するためのURL
-        """
-
-        payload = {'client_id': self.client_id,
-                   'response_type': 'token'}
-
-        if state is None:
-            state = self.state
-        if state is not None:
-            payload['state'] = state
-
-        urlparams = urllib.parse.urlencode(payload)
-
-        return f'{OAUTH_BASE_URL}?{urlparams}'
-
-    def get_access_token(self, url):
-        """
-            認可後にリダイレクトしたURLから認可情報を解析し取り出す
-
-            Parameters:
-                - url - リダイレクトされたURL
-
-            Return:
-                トークンの情報
-        """
-        try:
-            # URLから認可情報を取り出す
-            # urllib.parse.parse_qs()を使う
-            token_info = urllib.parse.parse_qs(url.split('#')[1])
-            for k, v in token_info.items():
-                item = v[0]
-                token_info[k] = item
-
-            # CSRFの比較
-            if self.state:
-                r_state = token_info.get('state', None)
-                if r_state is None or not self.state == r_state:
-                    raise TwitcastingError('Invalid CSRF token')
-
-            token_info = self._add_custom_values_to_token_info(token_info)
-            return token_info
-        except IndexError:
-            return None
-
-    def _add_custom_values_to_token_info(self, token_info):
-        """ 
-            WebAPIでは取得できない値を追加する
-
-            Parameters:
-                - token_info - WebAPIから取得した認可情報
-
-            Return:
-                情報が追加されたtoken_info
-        """
-        # トークンの失効日時
-        token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
-        return token_info
-
-class TwitcastingApplicationBasis(object):
-    """
-        アプリケーション単位でのアクセス
-        http://apiv2-doc.twitcasting.tv/#access-token
-        なんかこれ微妙なクラスな気がする...
-    """
-    def __init__(self, client_id, client_secret):
-        self.client_id = client_id
-        self.client_secret = client_secret
-
-    def get_basic_headers(self):
-        enc = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode("utf-8")).decode('utf-8')
-        return {'Authorization': f'Basic {enc}'}
-
-class TwitcastingOauth(object):
-    """
-        Authorization Code Grantの認可フロー
-        http://apiv2-doc.twitcasting.tv/#authorization-code-grant
-    """
-
-    def __init__(self, client_id, client_secret, redirect_uri, state=None):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.redirect_uri = redirect_uri
-        self.state = state
-
-    def get_authorize_url(self, state=None):
-        """
-            認可のためのURLを取得
-
-            Parameters:
-                - state - CSRFトークン
-
-            Return:
-                認可するためのURL
-        """
-        payload = {'client_id': self.client_id,
-                   'response_type': 'code'}
-
-        if state is None:
-            state = self.state
-        if state is not None:
-            payload['state'] = state
-
-        urlparams = urllib.parse.urlencode(payload)
-
-        return f'{OAUTH_BASE_URL}?{urlparams}'
-
-    def parse_response_code(self, url):
-        """
-            認可後にリダイレクトしたURLから認可情報を解析し取り出す
-
-            Parameters:
-                - url - リダイレクトされたURL
-
-            Return:
-                アクセストークン取得コード
-        """
-        try:
-            qry = url.split('?code=')[1].split('&')
-
-            # CSRFトークンの確認
-            if self.state:
-                qry_state = qry[1].split('state=')[1]
-                if not self.state == qry_state:
-                    raise TwitcastingError('Invalid CSRF token')
-            code = qry[0]
-            return code
-        except IndexError:
-            return None
-
-    def get_access_token(self, code):
-        """
-            コードを使って、アクセストークンを取得する
-
-            Parameters:
-                - code - 取得したコード
-
-            Return:
-                認可情報
-        """
-        payload = {'code': code, 
-                   'grant_type': 'authorization_code',
-                   'client_id': self.client_id,
-                   'client_secret': self.client_secret,
-                   'redirect_uri': self.redirect_uri}
-
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
-        # TODO: proxiesがなんなのかわかんない...
-        res = requests.post(OAUTH_TOKEN_URL, data=payload, headers=headers)
-
-        if res.status_code != 200:
-            raise TwitcastingError(res.reason)
-
-        token_info = res.json()
-        token_info = self._add_custom_values_to_token_info(token_info)
-        return token_info
-
-    def _add_custom_values_to_token_info(self, token_info):
-        """ 
-            WebAPIでは取得できない値を追加する
-
-            Parameters:
-                - token_info - WebAPIから取得した認可情報
-
-            Return:
-                情報が追加されたtoken_info
-        """
-        # トークンの失効日時
-        token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
-        return token_info
-
-
-class TwitcastingException(Exception):
-    def __init__(self, http_status, code, msg):
-        self.http_status = http_status
-        self.code = code
-        self.msg = msg
-
-    def __str__(self):
-        return f'http status: {self.http_status}, code: {self.code} {self.msg}'
-
-
-class Twitcasting(object):
-
-    def __init__(self, auth=None, requests_session=True, application_basis=None, accept_encoding=False, requests_timeout=None):
+    def __init__(self, auth=None, requests_session=True, application_basis=None,
+                 accept_encoding=False, requests_timeout=None):
         """
             Parameters:
                 - auth - アクセストークン
@@ -310,7 +105,7 @@ class Twitcasting(object):
                     details = ''
                 raise TwitcastingException(r.status_code, err['code'], f"{r.url}:\n {err['message']}{details}")
             else:
-                raise TwitcastingException(r.status_code, -1, f'r.url:\n error')
+                raise TwitcastingException(r.status_code, -1, f'{r.url}:\n error')
         finally:
             # 一応呼んでおく
             r.close()
@@ -323,6 +118,7 @@ class Twitcasting(object):
                 file_ext = r.headers['Content-Type'].replace('image/', '')
                 ret = {'bytes_data': r.content,
                        'file_ext': file_ext}
+                # retはどうするの
                 return ret
             else:
                 return r.json()
@@ -374,9 +170,11 @@ class Twitcasting(object):
                 - user_id - ユーザーのidかscreen_id
 
             Return:
-                - dict - {'user': Userオブジェクト}
+                Userオブジェクト
         """
-        return self._get(f'/users/{user_id}')
+        res = self._get(f'/users/{user_id}')
+        parser = ModelParser()
+        return parser.parse(self, res['user'], parse_type='user', payload_list=False)
 
     def verify_credentials(self):
         """
@@ -387,10 +185,14 @@ class Twitcasting(object):
             ※ Authorization Code GrantかImplicitでないと、エラーになる
 
             Return:
-                - dict - {'app': アクセストークンに紐づくAppオブジェクト,
-                          'user': アクセストークンに紐づくUserオブジェクト}
+                - dict - {'app': アクセストークンに紐づくApp,
+                          'user': アクセストークンに紐づくUser}
         """
-        return self._get('/verify_credentials')
+        res = self._get('/verify_credentials')
+        parser = ModelParser()
+        res['app'] = parser.parse(self, payload=res['app'], parse_type='app', payload_list=False)
+        res['user'] = parser.parse(self, payload=res['user'], parse_type='user', payload_list=False)
+        return res
 
     def get_live_thumbnail_image(self, user_id, size='small', position='latest'):
         """
@@ -408,6 +210,7 @@ class Twitcasting(object):
                           'file_ext': ファイル拡張子('jepg' or 'png')}
         """
         return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
+        
 
     def get_movie_info(self, movie_id):
         """
@@ -419,11 +222,15 @@ class Twitcasting(object):
                 - movie_id - ライブID
 
             Return:
-                - dict - {'movie': Movieオブジェクト,
-                          'broadcaster': 配信者のUserオブジェクト,
+                - dict - {'movie': Movie,
+                          'broadcaster': 配信者のUser,
                           'tags': 設定されているタグの配列}
         """
-        return self._get(f'/movies/{movie_id}')
+        res = self._get(f'/movies/{movie_id}')
+        parser = ModelParser()
+        res['movie'] = parser.parse(self, payload=res['movie'], parse_type='movie', payload_list=False)
+        res['broadcaster'] = parser.parse(self, payload=res['broadcaster'], parse_type='user', payload_list=False)
+        return res
 
     def get_movies_by_user(self, user_id, offset=0, limit=20):
         """
@@ -438,9 +245,14 @@ class Twitcasting(object):
 
             Return:
                 - dict - {'total_count': offset,limitの条件での総件数,
-                          'movies': Movieオブジェクトの配列}
+                          'movies': Movieの配列}
         """
-        return self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
+        res = self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
+        # 配列からMovieクラスの配列を作る
+        parser = ModelParser()
+        res['movies'] = parser.parse(self, res['movies'], parse_type='movie', payload_list=True)
+
+        return res
 
     def get_current_live(self, user_id):
         """
@@ -453,11 +265,16 @@ class Twitcasting(object):
 
             Return:
                 - dict - {'movie': Movieオブジェクト,
-                          'broadcaster': 配信者のUserオブジェクト,
+                          'user': 配信者のUser,
                           'tags': 設定されているタグの配列}
         """
         # TODO: ライブ中ではない場合、エラーを返すでよいのか
-        return self._get(f'/users/{user_id}/current_live')
+        res = self._get(f'/users/{user_id}/current_live')
+        parser = ModelParser()
+        res['movie'] = parser.parse(self, res['movie'], parse_type='movie', payload_list=False)
+        res['user'] = parser.parse(self, res['broadcaster'], parse_type='user', payload_list=False)
+        del res['broadcaster']
+        return res
 
     def get_comments(self, movie_id, offset=0, limit=10, slice_id=None):
         """
@@ -474,13 +291,19 @@ class Twitcasting(object):
             Return:
                 - dict - {'movie_id': ライブID,
                           'all_count': 総コメント数,
-                          'comments': Commentオブジェクトの配列}
+                          'comments': Commentの配列}
         """
         params = {'offset': offset, 'limit': limit}
 
-        if slice_id is not None:
+        if slice_id:
             params['slice_id'] = slice_id
-        return self._get(f'/movies/{movie_id}/comments', args=params)
+
+        res = self._get(f'/movies/{movie_id}/comments', args=params)
+        parser = ModelParser()
+        res['comments'] = parser.parse(self, res['comments'], parse_type='comment', payload_list=True)
+
+        return res
+
 
     def post_comment(self, movie_id, comment, sns='none'):
         """
@@ -499,10 +322,13 @@ class Twitcasting(object):
             Return:
                 - dict - {'movie_id': ライブID,
                           'all_count': 総コメント数,
-                          'comment': Commentオブジェクト}
+                          'comment': 投稿したComment}
         """
         data = {'comment': comment, 'sns': sns}
-        return self._post(f'/movies/{movie_id}/comments', payload=data)
+        res = self._post(f'/movies/{movie_id}/comments', payload=data)
+        parser = ModelParser()
+        res['comment'] = parser.parse(self, res['comment'], parse_type='comment', payload_list=False)
+        return res
 
     def delete_comment(self, movie_id, comment_id):
         """
@@ -516,9 +342,10 @@ class Twitcasting(object):
                 - comment_id - 投稿するコメント
 
             Return:
-                - dict - {'comment_id': 削除したコメントID}
+                - 削除したコメントID
         """
-        return self._del(f'/movies/{movie_id}/comments/{comment_id}')
+        res = self._del(f'/movies/{movie_id}/comments/{comment_id}')
+        return res['comment_id']
 
     def get_supporting_status(self, user_id, target_user_id):
         """
@@ -532,9 +359,13 @@ class Twitcasting(object):
 
             Return:
                 - dict - {'is_supporting': サポーターかどうか,
-                          'target_user': 対象ユーザのUserオブジェクト}
+                          'user': 対象ユーザのUser}
         """
-        return self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
+        res = self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
+        parser = ModelParser()
+        res['user'] = parser.parse(self, res['target_user'], parse_type='user', payload_list=False)
+        del res['target_user']
+        return res
 
     def support_user(self, target_user_ids):
         """
@@ -547,11 +378,12 @@ class Twitcasting(object):
                                     1度に20人まで可能
 
             Return:
-                - dict - {'added_count': サポーター登録を行った件数}
+                サポーター登録を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put('/support', payload=data)
+        res = self._put('/support', payload=data)
+        return res['added_count'] if res else None
 
     def unsupport_user(self, target_user_ids):
         """
@@ -564,13 +396,14 @@ class Twitcasting(object):
                                     1度に20人まで可能
 
             Return:
-                - dict - {'removed_count': サポーター解除を行った件数}
+                サポーター解除を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put('/unsupport', payload=data)
+        res = self._put('/unsupport', payload=data)
+        return res['removed_count'] if res else None
 
-    def supporting_list(self, user_id, offset=0, limit=20):
+    def get_supporting_list(self, user_id, offset=0, limit=20):
         """
             Supporting List
             指定したユーザがサポート`している`ユーザの一覧を取得する
@@ -583,11 +416,15 @@ class Twitcasting(object):
 
             Return:
                 - dict - {'total': 全レコード数,
-                          'supporting': Supportingオブジェクトの配列}
+                          'users': Userの配列}
         """
-        return self._get(f'/users/{user_id}/supporting', offset=offset, limit=limit)
+        res = self._get(f'/users/{user_id}/supporting', offset=offset, limit=limit)
+        parser = ModelParser()
+        res['users'] = parser.parse(self, res['supporting'], parse_type='user', payload_list=True)
+        del res['supporting']
+        return res
 
-    def supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
+    def get_supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
         """
             Supporting List
             指定したユーザがサポート`している`ユーザの一覧を取得する
@@ -601,9 +438,13 @@ class Twitcasting(object):
 
             Return:
                 - dict - {'total': 全レコード数,
-                          'supporting': Supportingオブジェクトの配列}
+                          'users': Userの配列}
         """
-        return self._get(f'/users/{user_id}/supporters', offset=offset, limit=limit, sort=sort)
+        res = self._get(f'/users/{user_id}/supporters', offset=offset, limit=limit, sort=sort)
+        parser = ModelParser()
+        res['users'] = parser.parse(self, res['supporters'], parse_type='user', payload_list=True)
+        del res['supporters']
+        return res
 
     def get_categories(self, lang='ja'):
         """
@@ -613,13 +454,16 @@ class Twitcasting(object):
             
             Parameters:
                 - lang - 検索対象の言語. 'ja' or 'en'
+                         構造体みたいなのないの
 
             Return:
-                - dict - {'categories': Categoryオブジェクトの配列}
+                Categoryオブジェクトの配列
         """
-        return self._get('/categories', lang=lang)
+        res = self._get('/categories', lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, res['categories'], parse_type='category', payload_list=True)
 
-    def serach_users(self, words, limit=10, lang='ja'):
+    def search_users(self, words, limit=10, lang='ja'):
         """
             Search Users
             ユーザを検索する
@@ -632,14 +476,14 @@ class Twitcasting(object):
                          日本語で設定しているユーザのみ検索可能
 
             Return:
-                - dict - {'users': Userオブジェクトの配列}
+                Userの配列
         """
-        # これじゃだめっぽい...
-        # ブラウザと一緒の結果にはならないの！？
         w = ' '.join(words) if len(words) > 1 else words[0]
-        return self._get('/search/users', words=urllib.parse.quote(w), limit=limit, lang=lang)
+        res = self._get('/search/users', words=w, limit=limit, lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['users'], parse_type='user', payload_list=True)
 
-    def search_live_movies(self, search_type='tag', content=None, limit=10, lang='ja'):
+    def search_live_movies(self, search_type='new', context=None, limit=10, lang='ja'):
         """
             Search Live Movies
             配信中のライブを検索する
@@ -649,7 +493,7 @@ class Twitcasting(object):
                 - search_type - 検索種別. 
                                  'tag' or 'word' or 'category' or 
                                  'new'(新着) or 'recommend'(おすすめ)
-                - content - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
+                - context - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
                              search_type='tag' or 'word': AND検索する単語のリスト
                              search_type='category': サブカテゴリID
                              search_type='new' or 'recommend': None(不要)
@@ -657,24 +501,29 @@ class Twitcasting(object):
                 - lang - 検索対象のユーザの言語設定. 現在は'ja'のみ
 
             Return:
-                - dict - {'movies': Movieオブジェクトの配列}
-                         `/movies/:movie_id`と同じ結果
+                Movieオブジェクトの配列
+                `/movies/:movie_id`と同じ結果
         """
         params = {'type': search_type, 'limit': limit, 'lang': lang}
 
         # search_typeによってcontentを設定
-        if search_type and content:
+        if search_type and context:
             if search_type in ['tag', 'word']:
-                # TODO: これだとWebとおなじ結果にはならない
-                w = ' '.join(content) if len(content) > 1 else content[0]
-                params['content'] = urllib.parse.quote(w)
+                # パラメータはurlencodeされるためエンコードされるし、
+                # ' 'を'+'に変換してくれているから、空白で結合し、渡す
+                w = ' '.join(context) if len(context) > 1 else context[0]
+                params['context'] = w
+
             elif search_type in ['category']:
                 params['content'] = content
+
             elif search_type in ['new', 'recommend']:
                 # 追加しない
                 pass
 
-        return self._get('/search/lives', args=params)
+        res = self._get('/search/lives', args=params)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['movies'], parse_type='movie', payload_list=True)
 
     def get_webhook_list(self, limit=50, offset=0, user_id=None):
         """
@@ -693,8 +542,8 @@ class Twitcasting(object):
                 limitとoffsetはuser_idがNoneのときのみ指定できる
 
             Return:
-                - dict - {'all_count': 登録済みWebHook件数,
-                          'webhooks': WebHookオブジェクトの配列}
+                - dict - {'all_count': このアプリに登録済みWebHook件数,
+                          'webhooks': WebHookの配列}
         """
         params = {}
         if user_id:
@@ -702,7 +551,12 @@ class Twitcasting(object):
         else:
             params['limit'] = limit
             params['offset'] = offset
-        return self._get('/webhooks', args=params)
+
+        res = self._get('/webhooks', args=params)
+        parser = ModelParser()
+        res['webhooks'] = parser.parse(self, payload=res['webhooks'], parse_type='webhook', payload_list=True)
+        
+        return res
 
     def register_webhook(self, user_id, events):
         """
@@ -712,7 +566,7 @@ class Twitcasting(object):
             必須パーミッション: any
             
             Parameters:
-                - user_id - 対象のユーザのidかscreen_id
+                - user_id - 対象のユーザのid
                 - events - フックするイベント種別の配列
                             'livestart', 'liveend'
 
@@ -731,7 +585,7 @@ class Twitcasting(object):
             必須パーミッション: any
             
             Parameters:
-                - user_id - 対象のユーザのidかscreen_id
+                - user_id - 対象のユーザのid
                 - events - フックを削除するイベント種別の配列
                             'livestart', 'liveend'
 
@@ -771,27 +625,3 @@ class Twitcasting(object):
         """
         # (WebMってなに！？)
         return self._get('/webm_url')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
