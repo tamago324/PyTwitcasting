@@ -105,7 +105,7 @@ class API(object):
                     details = ''
                 raise TwitcastingException(r.status_code, err['code'], f"{r.url}:\n {err['message']}{details}")
             else:
-                raise TwitcastingException(r.status_code, -1, f'r.url:\n error')
+                raise TwitcastingException(r.status_code, -1, f'{r.url}:\n error')
         finally:
             # 一応呼んでおく
             r.close()
