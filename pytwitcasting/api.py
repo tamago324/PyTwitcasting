@@ -463,7 +463,7 @@ class API(object):
         parser = ModelParser()
         return parser.parse(self, res['categories'], parse_type='category', payload_list=True)
 
-    def serach_users(self, words, limit=10, lang='ja'):
+    def search_users(self, words, limit=10, lang='ja'):
         """
             Search Users
             ユーザを検索する
@@ -476,12 +476,12 @@ class API(object):
                          日本語で設定しているユーザのみ検索可能
 
             Return:
-                - dict - {'users': Userオブジェクトの配列}
+                Userの配列
         """
-        # これじゃだめっぽい...
-        # ブラウザと一緒の結果にはならないの！？
         w = ' '.join(words) if len(words) > 1 else words[0]
-        return self._get('/search/users', words=urllib.parse.quote(w), limit=limit, lang=lang)
+        res = self._get('/search/users', words=w, limit=limit, lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['users'], parse_type='user', payload_list=True)
 
     def search_live_movies(self, search_type='new', context=None, limit=10, lang='ja'):
         """
