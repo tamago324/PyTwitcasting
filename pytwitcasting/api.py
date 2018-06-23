@@ -480,7 +480,7 @@ class API(object):
         w = ' '.join(words) if len(words) > 1 else words[0]
         return self._get('/search/users', words=urllib.parse.quote(w), limit=limit, lang=lang)
 
-    def search_live_movies(self, search_type='tag', content=None, limit=10, lang='ja'):
+    def search_live_movies(self, search_type='new', context=None, limit=10, lang='ja'):
         """
             Search Live Movies
             配信中のライブを検索する
@@ -490,7 +490,7 @@ class API(object):
                 - search_type - 検索種別. 
                                  'tag' or 'word' or 'category' or 
                                  'new'(新着) or 'recommend'(おすすめ)
-                - content - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
+                - context - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
                              search_type='tag' or 'word': AND検索する単語のリスト
                              search_type='category': サブカテゴリID
                              search_type='new' or 'recommend': None(不要)
@@ -498,24 +498,29 @@ class API(object):
                 - lang - 検索対象のユーザの言語設定. 現在は'ja'のみ
 
             Return:
-                - dict - {'movies': Movieオブジェクトの配列}
-                         `/movies/:movie_id`と同じ結果
+                Movieオブジェクトの配列
+                `/movies/:movie_id`と同じ結果
         """
         params = {'type': search_type, 'limit': limit, 'lang': lang}
 
         # search_typeによってcontentを設定
-        if search_type and content:
+        if search_type and context:
             if search_type in ['tag', 'word']:
-                # TODO: これだとWebとおなじ結果にはならない
-                w = ' '.join(content) if len(content) > 1 else content[0]
-                params['content'] = urllib.parse.quote(w)
+                # パラメータはurlencodeされるためエンコードされるし、
+                # ' 'を'+'に変換してくれているから、空白で結合し、渡す
+                w = ' '.join(context) if len(context) > 1 else context[0]
+                params['context'] = w
+
             elif search_type in ['category']:
                 params['content'] = content
+
             elif search_type in ['new', 'recommend']:
                 # 追加しない
                 pass
 
-        return self._get('/search/lives', args=params)
+        res = self._get('/search/lives', args=params)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['movies'], parse_type='movie', payload_list=True)
 
     def get_webhook_list(self, limit=50, offset=0, user_id=None):
         """
