@@ -454,11 +454,14 @@ class API(object):
             
             Parameters:
                 - lang - 検索対象の言語. 'ja' or 'en'
+                         構造体みたいなのないの
 
             Return:
-                - dict - {'categories': Categoryオブジェクトの配列}
+                Categoryオブジェクトの配列
         """
-        return self._get('/categories', lang=lang)
+        res = self._get('/categories', lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, res['categories'], parse_type='category', payload_list=True)
 
     def serach_users(self, words, limit=10, lang='ja'):
         """
