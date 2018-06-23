@@ -542,8 +542,8 @@ class API(object):
                 limitとoffsetはuser_idがNoneのときのみ指定できる
 
             Return:
-                - dict - {'all_count': 登録済みWebHook件数,
-                          'webhooks': WebHookオブジェクトの配列}
+                - dict - {'all_count': このアプリに登録済みWebHook件数,
+                          'webhooks': WebHookの配列}
         """
         params = {}
         if user_id:
@@ -551,7 +551,12 @@ class API(object):
         else:
             params['limit'] = limit
             params['offset'] = offset
-        return self._get('/webhooks', args=params)
+
+        res = self._get('/webhooks', args=params)
+        parser = ModelParser()
+        res['webhooks'] = parser.parse(self, payload=res['webhooks'], parse_type='webhook', payload_list=True)
+        
+        return res
 
     def register_webhook(self, user_id, events):
         """
@@ -561,7 +566,7 @@ class API(object):
             必須パーミッション: any
             
             Parameters:
-                - user_id - 対象のユーザのidかscreen_id
+                - user_id - 対象のユーザのid
                 - events - フックするイベント種別の配列
                             'livestart', 'liveend'
 
@@ -580,7 +585,7 @@ class API(object):
             必須パーミッション: any
             
             Parameters:
-                - user_id - 対象のユーザのidかscreen_id
+                - user_id - 対象のユーザのid
                 - events - フックを削除するイベント種別の配列
                             'livestart', 'liveend'
 
