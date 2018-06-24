@@ -2,9 +2,9 @@
 
 ツイキャスのAPI(TwitCastingのAPIv2(β))と通信するためのライブラリ
 
-https://github.com/plamere/spotipy を参考に書いている
+以下のライブラリを参考に書いてみた
 
-以下のメソッドはうまく動かない
+- https://github.com/plamere/spotipy
+- https://github.com/tweepy/tweepy
 
-- `search_uesrs()`
-- `search_live_movies()`
+
