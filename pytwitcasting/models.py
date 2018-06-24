@@ -139,21 +139,42 @@ class Category(Model):
 
     @classmethod
     def parse(cls, api, json):
-        pass
+        category = cls(api)
+        setattr(category, '_json', json)
+
+        for k, v in json.items():
+            if k == 'sub_categories':
+                setattr(category, k, SubCategory.parse_list(api, v))
+            else:
+                setattr(category, k, v)
+
+        return category
 
 
 class SubCategory(Model):
 
     @classmethod
     def parse(cls, api, json):
-        pass
+        sub_category = cls(api)
+        setattr(sub_category, '_json', json)
+
+        for k, v in json.items():
+            setattr(sub_category, k, v)
+
+        return sub_category
 
 
 class WebHook(Model):
 
     @classmethod
     def parse(cls, api, json):
-        pass
+        webhook = cls(api)
+        setattr(webhook, '_json', json)
+
+        for k, v in json.items():
+            setattr(webhook, k, v)
+
+        return webhook
 
 
 # XXX: Errorオブジェクトいる？？

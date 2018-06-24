@@ -105,7 +105,7 @@ class API(object):
                     details = ''
                 raise TwitcastingException(r.status_code, err['code'], f"{r.url}:\n {err['message']}{details}")
             else:
-                raise TwitcastingException(r.status_code, -1, f'r.url:\n error')
+                raise TwitcastingException(r.status_code, -1, f'{r.url}:\n error')
         finally:
             # 一応呼んでおく
             r.close()
@@ -185,12 +185,14 @@ class API(object):
             ※ Authorization Code GrantかImplicitでないと、エラーになる
 
             Return:
-                - dict - {'app': アクセストークンに紐づくAppオブジェクト,
-                          'user': アクセストークンに紐づくUserオブジェクト}
+                - dict - {'app': アクセストークンに紐づくApp,
+                          'user': アクセストークンに紐づくUser}
         """
-        return self._get('/verify_credentials', 
-                         parse_type='credentials',
-                         parse_list=False)
+        res = self._get('/verify_credentials')
+        parser = ModelParser()
+        res['app'] = parser.parse(self, payload=res['app'], parse_type='app', payload_list=False)
+        res['user'] = parser.parse(self, payload=res['user'], parse_type='user', payload_list=False)
+        return res
 
     def get_live_thumbnail_image(self, user_id, size='small', position='latest'):
         """
@@ -224,7 +226,11 @@ class API(object):
                           'broadcaster': 配信者のUser,
                           'tags': 設定されているタグの配列}
         """
-        return self._get(f'/movies/{movie_id}')
+        res = self._get(f'/movies/{movie_id}')
+        parser = ModelParser()
+        res['movie'] = parser.parse(self, payload=res['movie'], parse_type='movie', payload_list=False)
+        res['broadcaster'] = parser.parse(self, payload=res['broadcaster'], parse_type='user', payload_list=False)
+        return res
 
     def get_movies_by_user(self, user_id, offset=0, limit=20):
         """
@@ -372,11 +378,12 @@ class API(object):
                                     1度に20人まで可能
 
             Return:
-                - dict - {'added_count': サポーター登録を行った件数}
+                サポーター登録を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put('/support', payload=data)
+        res = self._put('/support', payload=data)
+        return res['added_count'] if res else None
 
     def unsupport_user(self, target_user_ids):
         """
@@ -389,11 +396,12 @@ class API(object):
                                     1度に20人まで可能
 
             Return:
-                - dict - {'removed_count': サポーター解除を行った件数}
+                サポーター解除を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
-        return self._put('/unsupport', payload=data)
+        res = self._put('/unsupport', payload=data)
+        return res['removed_count'] if res else None
 
     def get_supporting_list(self, user_id, offset=0, limit=20):
         """
@@ -446,13 +454,16 @@ class API(object):
             
             Parameters:
                 - lang - 検索対象の言語. 'ja' or 'en'
+                         構造体みたいなのないの
 
             Return:
-                - dict - {'categories': Categoryオブジェクトの配列}
+                Categoryオブジェクトの配列
         """
-        return self._get('/categories', lang=lang)
+        res = self._get('/categories', lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, res['categories'], parse_type='category', payload_list=True)
 
-    def serach_users(self, words, limit=10, lang='ja'):
+    def search_users(self, words, limit=10, lang='ja'):
         """
             Search Users
             ユーザを検索する
@@ -465,14 +476,14 @@ class API(object):
                          日本語で設定しているユーザのみ検索可能
 
             Return:
-                - dict - {'users': Userオブジェクトの配列}
+                Userの配列
         """
-        # これじゃだめっぽい...
-        # ブラウザと一緒の結果にはならないの！？
         w = ' '.join(words) if len(words) > 1 else words[0]
-        return self._get('/search/users', words=urllib.parse.quote(w), limit=limit, lang=lang)
+        res = self._get('/search/users', words=w, limit=limit, lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['users'], parse_type='user', payload_list=True)
 
-    def search_live_movies(self, search_type='tag', content=None, limit=10, lang='ja'):
+    def search_live_movies(self, search_type='new', context=None, limit=10, lang='ja'):
         """
             Search Live Movies
             配信中のライブを検索する
@@ -482,7 +493,7 @@ class API(object):
                 - search_type - 検索種別. 
                                  'tag' or 'word' or 'category' or 
                                  'new'(新着) or 'recommend'(おすすめ)
-                - content - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
+                - context - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
                              search_type='tag' or 'word': AND検索する単語のリスト
                              search_type='category': サブカテゴリID
                              search_type='new' or 'recommend': None(不要)
@@ -490,24 +501,29 @@ class API(object):
                 - lang - 検索対象のユーザの言語設定. 現在は'ja'のみ
 
             Return:
-                - dict - {'movies': Movieオブジェクトの配列}
-                         `/movies/:movie_id`と同じ結果
+                Movieオブジェクトの配列
+                `/movies/:movie_id`と同じ結果
         """
         params = {'type': search_type, 'limit': limit, 'lang': lang}
 
         # search_typeによってcontentを設定
-        if search_type and content:
+        if search_type and context:
             if search_type in ['tag', 'word']:
-                # TODO: これだとWebとおなじ結果にはならない
-                w = ' '.join(content) if len(content) > 1 else content[0]
-                params['content'] = urllib.parse.quote(w)
+                # パラメータはurlencodeされるためエンコードされるし、
+                # ' 'を'+'に変換してくれているから、空白で結合し、渡す
+                w = ' '.join(context) if len(context) > 1 else context[0]
+                params['context'] = w
+
             elif search_type in ['category']:
                 params['content'] = content
+
             elif search_type in ['new', 'recommend']:
                 # 追加しない
                 pass
 
-        return self._get('/search/lives', args=params)
+        res = self._get('/search/lives', args=params)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['movies'], parse_type='movie', payload_list=True)
 
     def get_webhook_list(self, limit=50, offset=0, user_id=None):
         """
@@ -526,8 +542,8 @@ class API(object):
                 limitとoffsetはuser_idがNoneのときのみ指定できる
 
             Return:
-                - dict - {'all_count': 登録済みWebHook件数,
-                          'webhooks': WebHookオブジェクトの配列}
+                - dict - {'all_count': このアプリに登録済みWebHook件数,
+                          'webhooks': WebHookの配列}
         """
         params = {}
         if user_id:
@@ -535,7 +551,12 @@ class API(object):
         else:
             params['limit'] = limit
             params['offset'] = offset
-        return self._get('/webhooks', args=params)
+
+        res = self._get('/webhooks', args=params)
+        parser = ModelParser()
+        res['webhooks'] = parser.parse(self, payload=res['webhooks'], parse_type='webhook', payload_list=True)
+        
+        return res
 
     def register_webhook(self, user_id, events):
         """
@@ -545,7 +566,7 @@ class API(object):
             必須パーミッション: any
             
             Parameters:
-                - user_id - 対象のユーザのidかscreen_id
+                - user_id - 対象のユーザのid
                 - events - フックするイベント種別の配列
                             'livestart', 'liveend'
 
@@ -564,7 +585,7 @@ class API(object):
             必須パーミッション: any
             
             Parameters:
-                - user_id - 対象のユーザのidかscreen_id
+                - user_id - 対象のユーザのid
                 - events - フックを削除するイベント種別の配列
                             'livestart', 'liveend'
 
