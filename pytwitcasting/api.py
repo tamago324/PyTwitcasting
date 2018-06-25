@@ -31,7 +31,7 @@ class API(object):
 
         if isinstance(requests_session, requests.Session):
             # セッションを渡されたら、それを使う
-            self._session = session
+            self._session = requests_session
         else:
             if requests_session:
                 # 新しくセッションを作る
@@ -510,7 +510,7 @@ class API(object):
                 params['context'] = w
 
             elif search_type in ['category']:
-                params['content'] = content
+                params['context'] = context
 
             elif search_type in ['new', 'recommend']:
                 # 追加しない
