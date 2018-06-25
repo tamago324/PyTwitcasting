@@ -1,4 +1,3 @@
-
 from pytwitcasting.utils import parse_datetime
 from pprint import pprint
 
@@ -88,7 +87,7 @@ class Credentials():
                 setattr(credentials, k, App.parse(v))
             else:
                 setattr(credentials, k, v)
-        
+
         return credentials
 
 
@@ -178,7 +177,6 @@ class WebHook(Model):
 
 
 # XXX: Errorオブジェクトいる？？
-
 
 
 class ModelFactory(object):

@@ -1,8 +1,6 @@
 
-from pytwitcasting.error import TwitcastingError, TwitcastingException
+from pytwitcasting.error import TwitcastingError
 from pytwitcasting.models import ModelFactory
-
-import json
 
 
 class Parser(object):
@@ -36,7 +34,7 @@ class ModelParser(Parser):
     def parse(self, api, payload, parse_type, payload_list):
         try:
             if parse_type is None:
-                return 
+                return None
             # ModelFactoryからModelを取得
             model = getattr(self.model_factory, parse_type)
         except AttributeError:

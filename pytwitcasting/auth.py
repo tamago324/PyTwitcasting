@@ -4,6 +4,8 @@ import time
 
 import requests
 
+from error import TwitcastingError
+
 
 OAUTH_TOKEN_URL = 'https://apiv2.twitcasting.tv/oauth2/access_token'
 OAUTH_BASE_URL = 'https://apiv2.twitcasting.tv/oauth2/authorize'
@@ -77,7 +79,7 @@ class TwitcastingImplicit(object):
             return None
 
     def _add_custom_values_to_token_info(self, token_info):
-        """ 
+        """
             WebAPIでは取得できない値を追加する
 
             Parameters:
@@ -89,6 +91,7 @@ class TwitcastingImplicit(object):
         # トークンの失効日時
         token_info['expires_at'] = int(time.time()) + int(token_info['expires_in'])
         return token_info
+
 
 class TwitcastingApplicationBasis(object):
     """
@@ -103,6 +106,7 @@ class TwitcastingApplicationBasis(object):
     def get_basic_headers(self):
         enc = base64.b64encode(f"{self.client_id}:{self.client_secret}".encode("utf-8")).decode('utf-8')
         return {'Authorization': f'Basic {enc}'}
+
 
 class TwitcastingOauth(object):
     """
@@ -171,7 +175,7 @@ class TwitcastingOauth(object):
             Return:
                 認可情報
         """
-        payload = {'code': code, 
+        payload = {'code': code,
                    'grant_type': 'authorization_code',
                    'client_id': self.client_id,
                    'client_secret': self.client_secret,
@@ -190,7 +194,7 @@ class TwitcastingOauth(object):
         return token_info
 
     def _add_custom_values_to_token_info(self, token_info):
-        """ 
+        """
             WebAPIでは取得できない値を追加する
 
             Parameters:

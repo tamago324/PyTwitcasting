@@ -1,17 +1,14 @@
-import base64
 import json
-import urllib.parse
-import time
 
 import requests
 
 from pytwitcasting.error import TwitcastingException
-from pytwitcasting.parsers import RawParser, ModelParser
+from pytwitcasting.parsers import ModelParser
 from pprint import pprint
 
 
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
- 
+
 
 class API(object):
 
@@ -31,7 +28,7 @@ class API(object):
         self.application_basis = application_basis
         self.accept_encoding = accept_encoding
         self.requests_timeout = requests_timeout
-        
+
         if isinstance(requests_session, requests.Session):
             # セッションを渡されたら、それを使う
             self._session = session
@@ -210,7 +207,6 @@ class API(object):
                           'file_ext': ファイル拡張子('jepg' or 'png')}
         """
         return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
-        
 
     def get_movie_info(self, movie_id):
         """
@@ -304,7 +300,6 @@ class API(object):
 
         return res
 
-
     def post_comment(self, movie_id, comment, sns='none'):
         """
             Post Comment
@@ -352,7 +347,7 @@ class API(object):
             Get Supporting Status
             ユーザーが、ある別のユーザのサポーターであるかの状態を取得する
             必須パーミッション: Read
-            
+
             Parameters:
                 - user_id - ユーザのidかscreen_id
                 - target_user_id - 状態を取得する対象のユーザのidかscreen_id
@@ -372,7 +367,7 @@ class API(object):
             Support User
             指定したユーザーのサポーターになる
             必須パーミッション: Write
-            
+
             Parameters:
                 - target_user_ids - サポーターになるユーザのidかscreen_idのリスト
                                     1度に20人まで可能
@@ -390,7 +385,7 @@ class API(object):
             Unsupport User
             指定したユーザーのサポーターになる
             必須パーミッション: Write
-            
+
             Parameters:
                 - target_user_ids - サポーターを解除するユーザのidかscreen_idのリスト
                                     1度に20人まで可能
@@ -408,7 +403,7 @@ class API(object):
             Supporting List
             指定したユーザがサポート`している`ユーザの一覧を取得する
             必須パーミッション: Read
-            
+
             Parameters:
                 - user_id - ユーザのidかscreen_id
                 - offset - 先頭からの位置. min:0
@@ -429,7 +424,7 @@ class API(object):
             Supporting List
             指定したユーザがサポート`している`ユーザの一覧を取得する
             必須パーミッション: Read
-            
+
             Parameters:
                 - user_id - ユーザのidかscreen_id
                 - offset - 先頭からの位置. min:0
@@ -451,7 +446,7 @@ class API(object):
             Get Categories
             配信中のライブがあるカテゴリのみを取得する
             必須パーミッション: Read
-            
+
             Parameters:
                 - lang - 検索対象の言語. 'ja' or 'en'
                          構造体みたいなのないの
@@ -468,7 +463,7 @@ class API(object):
             Search Users
             ユーザを検索する
             必須パーミッション: Read
-            
+
             Parameters:
                 - words - AND検索する単語のリスト
                 - limit - 取得件数. min:1, max:50
@@ -488,7 +483,7 @@ class API(object):
             Search Live Movies
             配信中のライブを検索する
             必須パーミッション: Read
-            
+
             Parameters:
                 - search_type - 検索種別. 
                                  'tag' or 'word' or 'category' or 
@@ -533,7 +528,7 @@ class API(object):
             *アプリケーション単位でのみ実行可能(Basic)*
             *******************************************
             必須パーミッション: any
-            
+
             Parameters:
                 - limit - 取得件数. min:1, max:100
                 - offset - 先頭からの位置. min:0
@@ -555,7 +550,7 @@ class API(object):
         res = self._get('/webhooks', args=params)
         parser = ModelParser()
         res['webhooks'] = parser.parse(self, payload=res['webhooks'], parse_type='webhook', payload_list=True)
-        
+
         return res
 
     def register_webhook(self, user_id, events):
@@ -564,7 +559,7 @@ class API(object):
             WebHookを新規登録します
             これを使うには、アプリケーションでWebHook URLの登録が必須
             必須パーミッション: any
-            
+
             Parameters:
                 - user_id - 対象のユーザのid
                 - events - フックするイベント種別の配列
@@ -583,7 +578,7 @@ class API(object):
             Remove WebHook
             WebHookを削除する
             必須パーミッション: any
-            
+
             Parameters:
                 - user_id - 対象のユーザのid
                 - events - フックを削除するイベント種別の配列
@@ -595,7 +590,7 @@ class API(object):
         """
         params = {'user_id': user_id, 'events[]': events}
         return self._del('/webhooks', args=params)
-    
+
     def get_rtmp_url(self):
         """
             Get RTMP Url
