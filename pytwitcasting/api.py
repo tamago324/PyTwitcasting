@@ -167,7 +167,7 @@ class API(object):
                 - user_id - ユーザーのidかscreen_id
 
             Return:
-                Userオブジェクト
+                User
         """
         res = self._get(f'/users/{user_id}')
         parser = ModelParser()
@@ -261,15 +261,14 @@ class API(object):
 
             Return:
                 - dict - {'movie': Movieオブジェクト,
-                          'user': 配信者のUser,
+                          'broadcaster': 配信者のUser,
                           'tags': 設定されているタグの配列}
         """
         # TODO: ライブ中ではない場合、エラーを返すでよいのか
         res = self._get(f'/users/{user_id}/current_live')
         parser = ModelParser()
         res['movie'] = parser.parse(self, res['movie'], parse_type='movie', payload_list=False)
-        res['user'] = parser.parse(self, res['broadcaster'], parse_type='user', payload_list=False)
-        del res['broadcaster']
+        res['broadcaster'] = parser.parse(self, res['broadcaster'], parse_type='user', payload_list=False)
         return res
 
     def get_comments(self, movie_id, offset=0, limit=10, slice_id=None):
@@ -354,12 +353,11 @@ class API(object):
 
             Return:
                 - dict - {'is_supporting': サポーターかどうか,
-                          'user': 対象ユーザのUser}
+                          'target_user': 対象ユーザのUser}
         """
         res = self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
         parser = ModelParser()
-        res['user'] = parser.parse(self, res['target_user'], parse_type='user', payload_list=False)
-        del res['target_user']
+        res['target_user'] = parser.parse(self, res['target_user'], parse_type='user', payload_list=False)
         return res
 
     def support_user(self, target_user_ids):
@@ -415,8 +413,7 @@ class API(object):
         """
         res = self._get(f'/users/{user_id}/supporting', offset=offset, limit=limit)
         parser = ModelParser()
-        res['users'] = parser.parse(self, res['supporting'], parse_type='user', payload_list=True)
-        del res['supporting']
+        res['supporting'] = parser.parse(self, res['supporting'], parse_type='user', payload_list=True)
         return res
 
     def get_supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
@@ -437,8 +434,7 @@ class API(object):
         """
         res = self._get(f'/users/{user_id}/supporters', offset=offset, limit=limit, sort=sort)
         parser = ModelParser()
-        res['users'] = parser.parse(self, res['supporters'], parse_type='user', payload_list=True)
-        del res['supporters']
+        res['supporters'] = parser.parse(self, res['supporters'], parse_type='user', payload_list=True)
         return res
 
     def get_categories(self, lang='ja'):
