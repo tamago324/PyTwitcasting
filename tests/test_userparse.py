@@ -1,11 +1,8 @@
-import os
-import unittest
+import pytest
 
 from pytwitcasting.api import API
 from pytwitcasting.models import User
 from pytwitcasting.utils import parse_datetime
-
-TOKEN = os.environ['ACCESS_TOKEN']
 
 
 """
@@ -24,54 +21,31 @@ $ pipenv run python3 -m unittest discover tests
 """
 
 
-class Test_UserParse(unittest.TestCase):
+@pytest.fixture
+def user(json_data):
+    user = User(None)
+    user._json = json_data
+    user.id = '2756718188'
+    user.created = parse_datetime(1408883011)
+    return user
 
-    def setUp(self):
-        self._json = {
-            "id": "2756718188",
-            "screen_id": "tamago324_pad",
-            "name": "たまたまご",
-            "image": "http://imagegw02.twitcasting.tv/image3s/pbs.twimg.com/profile_images/948168012854583298/0rFfF-lX_normal.jpg",
-            "profile": "Vim Python とか / アイコンは[@rpaci_]が書いてくれた",
-            "level": 30,
-            "last_movie_id": "467161696",
-            "is_live": False,
-            "supporter_count": 190,
-            "supporting_count": 40,
-            "created": 1408883011
-        }
 
-        self._user = User(None)
-        self._user._json = self._json
-        self._user.id = '2756718188'
-        self._user.screen_id = 'tamago324_pad'
-        self._user.name = 'たまたまご'
-        self._user.image = 'http://imagegw02.twitcasting.tv/image3s/pbs.twimg.com/profile_images/948168012854583298/0rFfF-lX_normal.jpg'
-        self._user.profile = 'Vim Python とか / アイコンは[@rpaci_]が書いてくれた'
-        self._user.level = 30
-        self._user.last_movie_id = "467161696"
-        self._user.is_live = False
-        self._user.supporter_count = 190
-        self._user.supporting_count = 40
-        # XXX: これをテストする
-        self._user.created = parse_datetime(1408883011)
+@pytest.fixture
+def json_data():
+    json_data = {
+        "id": "2756718188",
+        "created": 1408883011
+    }
+    return json_data
 
-    def test_parse(self):
-        api = API(TOKEN)
-        user = User()
 
-        # import pudb; pudb.set_trace()  # デバッグコード
-        res = user.parse(api, self._json)
+def test_parse_user(user, json_data):
+    api = API(None)
+    usr = User()
 
-        self.assertEqual(getattr(res, '_json'), self._user._json)
-        self.assertEqual(getattr(res, 'id'), self._user.id)
-        self.assertEqual(getattr(res, 'screen_id'), self._user.screen_id)
-        self.assertEqual(getattr(res, 'name'), self._user.name)
-        self.assertEqual(getattr(res, 'image'), self._user.image)
-        self.assertEqual(getattr(res, 'profile'), self._user.profile)
-        self.assertEqual(getattr(res, 'level'), self._user.level)
-        self.assertEqual(getattr(res, 'last_movie_id'), self._user.last_movie_id)
-        self.assertEqual(getattr(res, 'is_live'), self._user.is_live)
-        self.assertEqual(getattr(res, 'supporter_count'), self._user.supporter_count)
-        self.assertEqual(getattr(res, 'supporting_count'), self._user.supporting_count)
-        self.assertEqual(getattr(res, 'created'), self._user.created)
+    # import pudb; pudb.set_trace()  # デバッグコード
+    res = usr.parse(api, json_data)
+
+    assert getattr(res, '_json') == user._json
+    assert getattr(res, 'id') == user.id
+    assert getattr(res, 'created') == user.created
