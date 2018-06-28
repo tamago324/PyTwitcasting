@@ -18,7 +18,7 @@ from pytwitcasting.utils import parse_datetime
 └── tests
     └── test_userparse.py
 
-$ pipenv run python3 -m unittest discover tests
+$ pipenv run python3 -m pytest
 """
 
 
