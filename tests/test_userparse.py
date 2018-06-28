@@ -1,3 +1,4 @@
+import json
 import pytest
 
 from pytwitcasting.api import API
@@ -32,11 +33,12 @@ def user(json_data):
 
 @pytest.fixture
 def json_data():
-    json_data = {
-        "id": "2756718188",
-        "created": 1408883011
-    }
-    return json_data
+    return json.loads("""
+        {
+            "id": "2756718188",
+            "created": 1408883011
+        }
+    """)
 
 
 def test_parse_user(user, json_data):
