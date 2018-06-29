@@ -40,7 +40,7 @@ def user_key():
             'supporting_count', 'created']
 
 
-@tape.use_cassette('tests/vcr_cassettes/user_info.json')
+@tape.use_cassette('user_info.json')
 def test_get_user_info(user_key):
     api = API(auth=TOKEN)
 
