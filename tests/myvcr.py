@@ -1,12 +1,8 @@
-import os
+from vcr import VCR
 
-import vcr
-
-
-TOKEN = os.environ['ACCESS_TOKEN']
 
 # URLとリクエストメソッドが一致するリクエストが同一とみなされる
-tape = vcr.VCR(
+vcr = VCR(
     # JSONだとバイナリを保存できないため(デフォルトでyamlだけど明示しておく
     serializer='yaml',
     cassette_library_dir='tests/cassettes',
@@ -14,5 +10,5 @@ tape = vcr.VCR(
     # アクセストークンを消去する
     filter_headers=['Authorization'],
     # テスト関数名を使い、自動生成
-    path_transformer=vcr.VCR.ensure_suffix('.yaml')
+    path_transformer=VCR.ensure_suffix('.yaml')
 )
