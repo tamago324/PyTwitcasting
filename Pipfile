@@ -10,6 +10,7 @@ name = "pypi"
 requests = "*"
 pytest = "*"
 vcrpy = "*"
+pyyaml = "*"
 
 
 [dev-packages]

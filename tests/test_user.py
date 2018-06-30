@@ -1,20 +1,11 @@
-import os
+import time
+
 import pytest
-import vcr
 
 from pytwitcasting.api import API
 from pytwitcasting.models import User
 
-TOKEN = os.environ['ACCESS_TOKEN']
-
-# URLとリクエストメソッドが一致するリクエストが同一とみなされる
-tape = vcr.VCR(
-    serializer='json',
-    cassette_library_dir='tests/cassettes',
-    record_mode='once',
-    # アクセストークンを消去する
-    filter_headers=['Authorization']
-)
+import tests.config as conf
 
 
 """
@@ -32,22 +23,42 @@ tape = vcr.VCR(
 $ pipenv run python3 -m pytest
 """
 
-
 @pytest.fixture
-def user_key():
-    return ['id', 'screen_id', 'name', 'image', 'profile', 'level',
-            'last_movie_id', 'is_live', 'supporter_count',
-            'supporting_count', 'created']
+def user():
+    user = User()
+    user._api = API(conf.TOKEN)
+    # レスポンスをもとに生成
+    user.created = 1408883011
+    user.id = '2756718188'
+    user.image = 'http://imagegw02.twitcasting.tv/image3s/pbs.twimg.com/profile_images/948168012854583298/0rFfF-lX_normal.jpg'
+    user.is_live = False
+    user.last_movie_id = '467161696'
+    user.level = 30
+    user.name = 'たまたまご'
+    user.profile = 'Vim Python とか / アイコンは[@rpaci_]が書いてくれた'
+    user.screen_id = 'tamago324_pad'
+    user.supporter_count = 190
+    user.supporting_count = 40
+    return user
 
 
-@tape.use_cassette('user_info.json')
-def test_get_user_info(user_key):
-    api = API(auth=TOKEN)
+@conf.tape.use_cassette
+def test_get_user_info(user):
+    api = API(auth=conf.TOKEN)
 
-    user = api.get_user_info('tamago324_pad')
+    res = api.get_user_info('tamago324_pad')
 
-    assert isinstance(user, User)
-    assert user.screen_id == 'tamago324_pad'
+    # 型チェック
+    assert isinstance(res, User)
 
-    for k in user_key:
-        assert hasattr(user, k)
+    # フィールドの値確認
+    for k in user.__dict__.keys():
+        if k == 'created':
+            # タイムスタンプ->unixtimeに変換し、比較
+            assert time.mktime(getattr(res, k).timetuple()) == getattr(user, k)
+        elif k == '_api':
+            # 型の確認
+            assert isinstance(getattr(res, k), type(getattr(user, k)))
+        else:
+            assert getattr(res, k) == getattr(user, k)
+

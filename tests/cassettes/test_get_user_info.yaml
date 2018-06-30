@@ -1,0 +1,32 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      User-Agent: [python-requests/2.18.4]
+      X-Api-Version: ['2.0']
+    method: GET
+    uri: https://apiv2.twitcasting.tv/users/tamago324_pad
+  response:
+    body: {string: "{\"user\":{\"id\":\"2756718188\",\"screen_id\":\"tamago324_pad\",\"name\":\"\u305F\u307E\u305F\u307E\u3054\",\"image\":\"http://imagegw02.twitcasting.tv/image3s/pbs.twimg.com/profile_images/948168012854583298/0rFfF-lX_normal.jpg\",\"profile\":\"Vim
+        Python \u3068\u304B / \u30A2\u30A4\u30B3\u30F3\u306F[@rpaci_]\u304C\u66F8\u3044\u3066\u304F\u308C\u305F\",\"level\":30,\"last_movie_id\":\"467161696\",\"is_live\":false,\"supporter_count\":190,\"supporting_count\":40,\"created\":1408883011}}"}
+    headers:
+      Cache-Control: ['no-store, no-cache, must-revalidate, post-check=0, pre-check=0']
+      Connection: [close]
+      Content-Length: ['397']
+      Content-Type: [application/json;charset=utf-8]
+      Date: ['Sat, 30 Jun 2018 13:14:53 GMT']
+      Expires: ['Thu, 19 Nov 1981 08:52:00 GMT']
+      Pragma: [no-cache]
+      Server: [Apache]
+      Set-Cookie: [PHPSESSID=jiuumjctbenb22ostv3t56t404; path=/]
+      Strict-Transport-Security: [max-age=0]
+      X-Powered-By: [PHP/5.6.34]
+      X-RateLimit-Limit: ['60']
+      X-RateLimit-Remaining: ['59']
+      X-RateLimit-Reset: ['1530364553']
+      X-WE-ARE-HIRING: ['http://about.moi.st/ja/recruit/']
+    status: {code: 200, message: OK}
+version: 1
