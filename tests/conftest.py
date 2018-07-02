@@ -6,6 +6,9 @@ from pytwitcasting.models import (
     User
 )
 
+# 見づらくなるため、image_dataに定義してある
+import image_data
+
 
 TOKEN = os.environ['ACCESS_TOKEN']
 
@@ -27,3 +30,24 @@ def user():
     user.supporter_count = 190
     user.supporting_count = 40
     return user
+
+@pytest.fixture
+def live_thumbnail_image_data():
+    data = {}
+    data['file_ext'] = 'jpeg'
+    data['bytes_data'] = image_data.live_thumbnail_image_data
+    return data
+
+@pytest.fixture
+def live_thumbnail_image_data_large():
+    data = {}
+    data['file_ext'] = 'jpeg'
+    data['bytes_data'] = image_data.live_thumbnail_image_large_data
+    return data
+
+@pytest.fixture
+def live_thumbnail_image_data_beginning():
+    data = {}
+    data['file_ext'] = 'jpeg'
+    data['bytes_data'] = image_data.live_thumbnail_image_beginning_data
+    return data

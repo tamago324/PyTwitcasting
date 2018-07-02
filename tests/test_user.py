@@ -44,3 +44,54 @@ def test_get_user_info(user):
             assert isinstance(getattr(res, k), type(getattr(user, k)))
         else:
             assert getattr(res, k) == getattr(user, k)
+
+@vcr.use_cassette
+def test_get_live_thumbnail_image(user, live_thumbnail_image_data):
+    res = user.get_live_thumbnail_image()
+    for k in live_thumbnail_image_data.keys():
+        assert res[k] == live_thumbnail_image_data[k]
+
+@vcr.use_cassette
+def test_get_live_thumbnail_image_large(user, live_thumbnail_image_data_large):
+    res = user.get_live_thumbnail_image(size='large')
+    for k in live_thumbnail_image_data_large.keys():
+        assert res[k] == live_thumbnail_image_data_large[k]
+
+@vcr.use_cassette
+def test_get_live_thumbnail_image_beginning(user, live_thumbnail_image_data_beginning):
+    res = user.get_live_thumbnail_image(position='beginning')
+    for k in live_thumbnail_image_data_beginning.keys():
+        assert res[k] == live_thumbnail_image_data_beginning[k]
+
+@vcr.use_cassette
+def test_save_live_thumbnail_image(user):
+    """ ライブサムネイル画像が保存できるか """
+    res = user.get_live_thumbnail_image()
+    assert save_image(img_bytes=res['bytes_data'], file_name=f'live_thumbnail.{res["file_ext"]}')
+
+@vcr.use_cassette
+def test_save_live_thumbnail_image_large(user):
+    """ ライブサムネイル画像が保存できるか
+        sizeに'large'を指定
+    """
+    res = user.get_live_thumbnail_image(size='large')
+    assert save_image(img_bytes=res['bytes_data'], file_name=f'live_thumbnail_large.{res["file_ext"]}')
+
+@vcr.use_cassette
+def test_save_live_thumbnail_image_beginning(user):
+    """ ライブサムネイル画像が保存できるか
+        positionに'beginning'を指定
+    """
+    res = user.get_live_thumbnail_image(position='beginning')
+    assert save_image(img_bytes=res['bytes_data'], file_name=f'live_thumbnail_beginning.{res["file_ext"]}')
+
+def save_image(img_bytes, file_name):
+    """ 画像を保存する """
+    dir_name = 'tests/images'
+    try:
+        with open(f'{dir_name}/{file_name}', 'wb') as f:
+            f.write(img_bytes)
+    except Exception as ex:
+        raise Exception(ex)
+    else:
+        return True
