@@ -9,11 +9,10 @@ from pytwitcasting.models import (
 # 見づらくなるため、image_dataに定義してある
 import image_data
 
-
 TOKEN = os.environ['ACCESS_TOKEN']
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def user():
     user = User()
     user._api = API(TOKEN)
@@ -31,23 +30,33 @@ def user():
     user.supporting_count = 40
     return user
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def live_thumbnail_image_data():
     data = {}
     data['file_ext'] = 'jpeg'
     data['bytes_data'] = image_data.live_thumbnail_image_data
     return data
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def live_thumbnail_image_data_large():
     data = {}
     data['file_ext'] = 'jpeg'
     data['bytes_data'] = image_data.live_thumbnail_image_large_data
     return data
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def live_thumbnail_image_data_beginning():
     data = {}
     data['file_ext'] = 'jpeg'
     data['bytes_data'] = image_data.live_thumbnail_image_beginning_data
     return data
+
+@pytest.fixture(scope='module')
+def movies_data():
+    """ offset: 0, limit: 20 """
+    data = []
+    movie = Movie()
+    user._api = API(TOKEN)
+
+    return None
+
