@@ -4,7 +4,7 @@ import time
 
 import requests
 
-from error import TwitcastingError
+from pytwitcasting.error import TwitcastingError
 
 
 OAUTH_TOKEN_URL = 'https://apiv2.twitcasting.tv/oauth2/access_token'
