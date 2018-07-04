@@ -64,34 +64,41 @@ def test_get_live_thumbnail_image_beginning(user, live_thumbnail_image_data_begi
         assert res[k] == live_thumbnail_image_data_beginning[k]
 
 @vcr.use_cassette
-def test_save_live_thumbnail_image(user):
+def test_save_live_thumbnail_image(user, tmpdir):
     """ ライブサムネイル画像が保存できるか """
     res = user.get_live_thumbnail_image()
-    assert save_image(img_bytes=res['bytes_data'], file_name=f'live_thumbnail.{res["file_ext"]}')
+    f = tmpdir.mkdir('images').join(f'live_thumbnail.{res["file_ext"]}')
+    try:
+        f.write(res['bytes_data'], mode='wb')
+    except:
+        assert False
+    else:
+        assert True
 
 @vcr.use_cassette
-def test_save_live_thumbnail_image_large(user):
+def test_save_live_thumbnail_image_large(user, tmpdir):
     """ ライブサムネイル画像が保存できるか
         sizeに'large'を指定
     """
     res = user.get_live_thumbnail_image(size='large')
-    assert save_image(img_bytes=res['bytes_data'], file_name=f'live_thumbnail_large.{res["file_ext"]}')
+    f = tmpdir.mkdir('images').join(f'live_thumbnail_large.{res["file_ext"]}')
+    try:
+        f.write(res['bytes_data'], mode='wb')
+    except:
+        assert False
+    else:
+        assert True
 
 @vcr.use_cassette
-def test_save_live_thumbnail_image_beginning(user):
+def test_save_live_thumbnail_image_beginning(user, tmpdir):
     """ ライブサムネイル画像が保存できるか
         positionに'beginning'を指定
     """
     res = user.get_live_thumbnail_image(position='beginning')
-    assert save_image(img_bytes=res['bytes_data'], file_name=f'live_thumbnail_beginning.{res["file_ext"]}')
-
-def save_image(img_bytes, file_name):
-    """ 画像を保存する """
-    dir_name = 'tests/images'
+    f = tmpdir.mkdir('images').join(f'live_thumbnail_beginning.{res["file_ext"]}')
     try:
-        with open(f'{dir_name}/{file_name}', 'wb') as f:
-            f.write(img_bytes)
-    except Exception as ex:
-        raise Exception(ex)
+        f.write(res['bytes_data'], mode='wb')
+    except:
+        assert False
     else:
-        return True
+        assert True
