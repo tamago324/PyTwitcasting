@@ -12,11 +12,11 @@ API_BASE_URL = 'https://apiv2.twitcasting.tv'
 
 class API(object):
 
-    def __init__(self, auth=None, requests_session=True, application_basis=None,
+    def __init__(self, access_token=None, requests_session=True, application_basis=None,
                  accept_encoding=False, requests_timeout=None):
         """
             Parameters:
-                - auth - アクセストークン
+                - access_token - アクセストークン
                 - requsts_session - セッションオブジェクト or セッションを使うかどうか
                 - TwitcastiongApplicationBasis - (option)
                     TwitcastiongApplicationBasisオブジェクト
@@ -24,7 +24,7 @@ class API(object):
                 - accept_encodeing - (option) レスポンスサイズが一定以上だった場合に圧縮するか
                 - requests_timeout - タイムアウト時間
         """
-        self._auth = auth
+        self._access_token = access_token
         self.application_basis = application_basis
         self.accept_encoding = accept_encoding
         self.requests_timeout = requests_timeout
@@ -48,8 +48,8 @@ class API(object):
             Return:
                 認可情報がついたヘッダー
         """
-        if self._auth:
-            return {'Authorization': f'Bearer {self._auth}'}
+        if self._access_token:
+            return {'Authorization': f'Bearer {self._access_token}'}
         elif self.application_basis:
             return self.application_basis.get_basic_headers()
         else:
