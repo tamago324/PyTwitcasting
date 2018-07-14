@@ -275,18 +275,37 @@ class API(object):
 
             Parameters:
                 - search_type (optional) - 検索種別.
-                            'tag' or 'word' or 'category' or
-                            'new' or 'recommend'
-                - context (optional) - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
-                            search_type='tag' or 'word': AND検索する単語のリスト
-                            search_type='category': サブカテゴリID
-                            search_type='new' or 'recommend': None(不要)
+                           'tag' or 'word' or 'category' or
+                           'new'(新着) or 'recommend'(おすすめ)
+                - context (optional) - 検索内容.search_typeの値によって決まる
+                           (required: type=tag, word, category)
+                           search_type='tag' or 'word': AND検索する単語のリスト
+                           search_type='category': サブカテゴリID
+                           search_type='new' or 'recommend': None(不要)
                 - limit (optional) - 取得件数. min:1, max:100
                 - lang (optional) - 検索対象のユーザの言語設定. 現在は'ja'のみ
 
             Return:
                 Movieオブジェクトの配列
                 `/movies/:movie_id`と同じ結果
+
+            Usage::
+
+                ex1) search_type='tag'.(context required)
+                >>> movies = api.search_live_movies(search_type='tag', context=['人気', '雑談'])
+
+                ex2) search_type='word'.(context required)
+                >>> movies = api.search_live_movies(search_type='word', context=['ツイキャス', 'ゲーム'])
+
+                ex3) search_type='category'.(context required)
+                     API.get_categories()で取得できるSubCategoryクラスの`id`を指定
+                >>> movies = api.search_live_movies(search_type='category', context='hobby_game_boys_jp')
+
+                ex4) search_type='new'.(context none)
+                >>> movies = api.search_live_movies(search_type='new')
+
+                ex4) search_type='recommend'.(context none)
+                >>> movies = api.search_live_movies(search_type='recommend')
         """
         params = {'type': search_type, 'limit': limit, 'lang': lang}
 
