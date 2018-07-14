@@ -191,6 +191,222 @@ class API(object):
         res['user'] = parser.parse(self, payload=res['user'], parse_type='user', payload_list=False)
         return res
 
+    def support_user(self, target_user_ids):
+        """
+            Support User
+            指定したユーザーのサポーターになる
+            必須パーミッション: Write
+
+            Parameters:
+                - target_user_ids - サポーターになるユーザのidかscreen_idのリスト
+                                    1度に20人まで可能
+
+            Return:
+                サポーター登録を行った件数
+        """
+        # dataとして渡す
+        data = {'target_user_ids': target_user_ids}
+        res = self._put('/support', payload=data)
+        return res['added_count'] if res else None
+
+    def unsupport_user(self, target_user_ids):
+        """
+            Unsupport User
+            指定したユーザーのサポーターになる
+            必須パーミッション: Write
+
+            Parameters:
+                - target_user_ids - サポーターを解除するユーザのidかscreen_idのリスト
+                                    1度に20人まで可能
+
+            Return:
+                サポーター解除を行った件数
+        """
+        # dataとして渡す
+        data = {'target_user_ids': target_user_ids}
+        res = self._put('/unsupport', payload=data)
+        return res['removed_count'] if res else None
+
+    def get_categories(self, lang='ja'):
+        """
+            Get Categories
+            配信中のライブがあるカテゴリのみを取得する
+            必須パーミッション: Read
+
+            Parameters:
+                - lang (optional) - 検索対象の言語. 'ja' or 'en'
+                                    XXX: 構造体みたいなのないの
+
+            Return:
+                Categoryオブジェクトの配列
+        """
+        res = self._get('/categories', lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, res['categories'], parse_type='category', payload_list=True)
+
+    def search_users(self, words, limit=10, lang='ja'):
+        """
+            Search Users
+            ユーザを検索する
+            必須パーミッション: Read
+
+            Parameters:
+                - words - AND検索する単語のリスト
+                - limit (optional) - 取得件数. min:1, max:50
+                - lang (optional) - 検索対象のユーザの言語設定. 現在は'ja'のみ
+                                    日本語で設定しているユーザのみ検索可能
+
+            Return:
+                Userの配列
+        """
+        w = ' '.join(words) if len(words) > 1 else words[0]
+        res = self._get('/search/users', words=w, limit=limit, lang=lang)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['users'], parse_type='user', payload_list=True)
+
+    def search_live_movies(self, search_type='new', context=None, limit=10, lang='ja'):
+        """
+            Search Live Movies
+            配信中のライブを検索する
+            必須パーミッション: Read
+
+            Parameters:
+                - search_type (optional) - 検索種別.
+                            'tag' or 'word' or 'category' or
+                            'new' or 'recommend'
+                - context (optional) - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
+                            search_type='tag' or 'word': AND検索する単語のリスト
+                            search_type='category': サブカテゴリID
+                            search_type='new' or 'recommend': None(不要)
+                - limit (optional) - 取得件数. min:1, max:100
+                - lang (optional) - 検索対象のユーザの言語設定. 現在は'ja'のみ
+
+            Return:
+                Movieオブジェクトの配列
+                `/movies/:movie_id`と同じ結果
+        """
+        params = {'type': search_type, 'limit': limit, 'lang': lang}
+
+        # search_typeによってcontentを設定
+        if search_type and context:
+            if search_type in ['tag', 'word']:
+                # パラメータはurlencodeされるためエンコードされるし、
+                # ' 'を'+'に変換してくれているから、空白で結合し、渡す
+                w = ' '.join(context) if len(context) > 1 else context[0]
+                params['context'] = w
+
+            elif search_type in ['category']:
+                params['context'] = context
+
+            elif search_type in ['new', 'recommend']:
+                # 追加しない
+                pass
+
+        res = self._get('/search/lives', args=params)
+        parser = ModelParser()
+        return parser.parse(self, payload=res['movies'], parse_type='movie', payload_list=True)
+
+    def get_webhook_list(self, limit=50, offset=0, user_id=None):
+        """
+            Get WebHook List
+            アプリケーションに紐づく WebHook の一覧を取得する
+            *******************************************
+            *アプリケーション単位でのみ実行可能(Basic)*
+            *******************************************
+            必須パーミッション: any
+
+            Parameters:
+                - limit - 取得件数. min:1, max:100
+                - offset - 先頭からの位置. min:0
+                - user_id - 対象のユーザのidかscreen_id
+
+                limitとoffsetはuser_idがNoneのときのみ指定できる
+
+            Return:
+                - dict - {'all_count': このアプリに登録済みWebHook件数,
+                          'webhooks': WebHookの配列}
+        """
+        params = {}
+        if user_id:
+            params['user_id'] = user_id
+        else:
+            params['limit'] = limit
+            params['offset'] = offset
+
+        res = self._get('/webhooks', args=params)
+        parser = ModelParser()
+        res['webhooks'] = parser.parse(self, payload=res['webhooks'], parse_type='webhook', payload_list=True)
+
+        return res
+
+    def register_webhook(self, user_id, events):
+        """
+            Register WebHook
+            WebHookを新規登録します
+            これを使うには、アプリケーションでWebHook URLの登録が必須
+            必須パーミッション: any
+
+            Parameters:
+                - user_id - 対象のユーザのid
+                - events - フックするイベント種別の配列
+                            'livestart', 'liveend'
+
+            Return:
+                - dict - {'user_id': 登録したユーザのid,
+                          'added_events': 登録したイベントの種類の配列}
+        """
+        data = {'user_id': user_id, 'events': events}
+        # そのまま渡す
+        return self._post('/webhooks', json_data=data)
+
+    def remove_webhook(self, user_id, events):
+        """
+            Remove WebHook
+            WebHookを削除する
+            必須パーミッション: any
+
+            Parameters:
+                - user_id - 対象のユーザのid
+                - events - フックを削除するイベント種別の配列
+                            'livestart', 'liveend'
+
+            Return:
+                - dict - {'user_id': 登録したユーザのid,
+                          'removed_events': 削除されたイベントの種類の配列}
+        """
+        params = {'user_id': user_id, 'events[]': events}
+        return self._del('/webhooks', args=params)
+
+    def get_rtmp_url(self):
+        """
+            Get RTMP Url
+            アクセストークンに紐づくユーザの配信用のURL(RTMP)を取得する
+            *******************************
+            *必須パーミッション: Broadcast*
+            *******************************
+
+            Return:
+                - dict - {'enabled': RTMP配信が有効かどうか,
+                          'url': RTMP配信用URL,
+                          'stream_key': RTMP配信用キー}
+        """
+        return self._get('/rtmp_url')
+
+    def get_webm_url(self):
+        """
+            Get WebM Url
+            アクセストークンに紐づくユーザの配信用のURL (WebM, WebSocket)を取得する
+            *******************************
+            *必須パーミッション: Broadcast*
+            *******************************
+
+            Return:
+                - dict - {'enabled': WebM配信が有効かどうか,
+                          'url': WebM配信用URL}
+        """
+        # (WebMってなに！？)
+        return self._get('/webm_url')
+
     def get_live_thumbnail_image(self, user_id, size='small', position='latest'):
         """
             Get Live Thumbnail Image
@@ -360,42 +576,6 @@ class API(object):
         res['target_user'] = parser.parse(self, res['target_user'], parse_type='user', payload_list=False)
         return res
 
-    def support_user(self, target_user_ids):
-        """
-            Support User
-            指定したユーザーのサポーターになる
-            必須パーミッション: Write
-
-            Parameters:
-                - target_user_ids - サポーターになるユーザのidかscreen_idのリスト
-                                    1度に20人まで可能
-
-            Return:
-                サポーター登録を行った件数
-        """
-        # dataとして渡す
-        data = {'target_user_ids': target_user_ids}
-        res = self._put('/support', payload=data)
-        return res['added_count'] if res else None
-
-    def unsupport_user(self, target_user_ids):
-        """
-            Unsupport User
-            指定したユーザーのサポーターになる
-            必須パーミッション: Write
-
-            Parameters:
-                - target_user_ids - サポーターを解除するユーザのidかscreen_idのリスト
-                                    1度に20人まで可能
-
-            Return:
-                サポーター解除を行った件数
-        """
-        # dataとして渡す
-        data = {'target_user_ids': target_user_ids}
-        res = self._put('/unsupport', payload=data)
-        return res['removed_count'] if res else None
-
     def get_supporting_list(self, user_id, offset=0, limit=20):
         """
             Supporting List
@@ -436,183 +616,3 @@ class API(object):
         parser = ModelParser()
         res['supporters'] = parser.parse(self, res['supporters'], parse_type='user', payload_list=True)
         return res
-
-    def get_categories(self, lang='ja'):
-        """
-            Get Categories
-            配信中のライブがあるカテゴリのみを取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - lang - 検索対象の言語. 'ja' or 'en'
-                         構造体みたいなのないの
-
-            Return:
-                Categoryオブジェクトの配列
-        """
-        res = self._get('/categories', lang=lang)
-        parser = ModelParser()
-        return parser.parse(self, res['categories'], parse_type='category', payload_list=True)
-
-    def search_users(self, words, limit=10, lang='ja'):
-        """
-            Search Users
-            ユーザを検索する
-            必須パーミッション: Read
-
-            Parameters:
-                - words - AND検索する単語のリスト
-                - limit - 取得件数. min:1, max:50
-                - lang - 検索対象のユーザの言語設定. 現在は'ja'のみ
-                         日本語で設定しているユーザのみ検索可能
-
-            Return:
-                Userの配列
-        """
-        w = ' '.join(words) if len(words) > 1 else words[0]
-        res = self._get('/search/users', words=w, limit=limit, lang=lang)
-        parser = ModelParser()
-        return parser.parse(self, payload=res['users'], parse_type='user', payload_list=True)
-
-    def search_live_movies(self, search_type='new', context=None, limit=10, lang='ja'):
-        """
-            Search Live Movies
-            配信中のライブを検索する
-            必須パーミッション: Read
-
-            Parameters:
-                - search_type - 検索種別. 
-                                 'tag' or 'word' or 'category' or 
-                                 'new'(新着) or 'recommend'(おすすめ)
-                - context - 検索内容.search_typeの値によって決まる(required: type=tag, word, category)
-                             search_type='tag' or 'word': AND検索する単語のリスト
-                             search_type='category': サブカテゴリID
-                             search_type='new' or 'recommend': None(不要)
-                - limit - 取得件数. min:1, max:100
-                - lang - 検索対象のユーザの言語設定. 現在は'ja'のみ
-
-            Return:
-                Movieオブジェクトの配列
-                `/movies/:movie_id`と同じ結果
-        """
-        params = {'type': search_type, 'limit': limit, 'lang': lang}
-
-        # search_typeによってcontentを設定
-        if search_type and context:
-            if search_type in ['tag', 'word']:
-                # パラメータはurlencodeされるためエンコードされるし、
-                # ' 'を'+'に変換してくれているから、空白で結合し、渡す
-                w = ' '.join(context) if len(context) > 1 else context[0]
-                params['context'] = w
-
-            elif search_type in ['category']:
-                params['context'] = context
-
-            elif search_type in ['new', 'recommend']:
-                # 追加しない
-                pass
-
-        res = self._get('/search/lives', args=params)
-        parser = ModelParser()
-        return parser.parse(self, payload=res['movies'], parse_type='movie', payload_list=True)
-
-    def get_webhook_list(self, limit=50, offset=0, user_id=None):
-        """
-            Get WebHook List
-            アプリケーションに紐づく WebHook の一覧を取得する
-            *******************************************
-            *アプリケーション単位でのみ実行可能(Basic)*
-            *******************************************
-            必須パーミッション: any
-
-            Parameters:
-                - limit - 取得件数. min:1, max:100
-                - offset - 先頭からの位置. min:0
-                - user_id - 対象のユーザのidかscreen_id
-
-                limitとoffsetはuser_idがNoneのときのみ指定できる
-
-            Return:
-                - dict - {'all_count': このアプリに登録済みWebHook件数,
-                          'webhooks': WebHookの配列}
-        """
-        params = {}
-        if user_id:
-            params['user_id'] = user_id
-        else:
-            params['limit'] = limit
-            params['offset'] = offset
-
-        res = self._get('/webhooks', args=params)
-        parser = ModelParser()
-        res['webhooks'] = parser.parse(self, payload=res['webhooks'], parse_type='webhook', payload_list=True)
-
-        return res
-
-    def register_webhook(self, user_id, events):
-        """
-            Register WebHook
-            WebHookを新規登録します
-            これを使うには、アプリケーションでWebHook URLの登録が必須
-            必須パーミッション: any
-
-            Parameters:
-                - user_id - 対象のユーザのid
-                - events - フックするイベント種別の配列
-                            'livestart', 'liveend'
-
-            Return:
-                - dict - {'user_id': 登録したユーザのid,
-                          'added_events': 登録したイベントの種類の配列}
-        """
-        data = {'user_id': user_id, 'events': events}
-        # そのまま渡す
-        return self._post('/webhooks', json_data=data)
-
-    def remove_webhook(self, user_id, events):
-        """
-            Remove WebHook
-            WebHookを削除する
-            必須パーミッション: any
-
-            Parameters:
-                - user_id - 対象のユーザのid
-                - events - フックを削除するイベント種別の配列
-                            'livestart', 'liveend'
-
-            Return:
-                - dict - {'user_id': 登録したユーザのid,
-                          'removed_events': 削除されたイベントの種類の配列}
-        """
-        params = {'user_id': user_id, 'events[]': events}
-        return self._del('/webhooks', args=params)
-
-    def get_rtmp_url(self):
-        """
-            Get RTMP Url
-            アクセストークンに紐づくユーザの配信用のURL(RTMP)を取得する
-            *******************************
-            *必須パーミッション: Broadcast*
-            *******************************
-
-            Return:
-                - dict - {'enabled': RTMP配信が有効かどうか,
-                          'url': RTMP配信用URL,
-                          'stream_key': RTMP配信用キー}
-        """
-        return self._get('/rtmp_url')
-
-    def get_webm_url(self):
-        """
-            Get WebM Url
-            アクセストークンに紐づくユーザの配信用のURL (WebM, WebSocket)を取得する
-            *******************************
-            *必須パーミッション: Broadcast*
-            *******************************
-
-            Return:
-                - dict - {'enabled': WebM配信が有効かどうか,
-                          'url': WebM配信用URL}
-        """
-        # (WebMってなに！？)
-        return self._get('/webm_url')
