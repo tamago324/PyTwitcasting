@@ -259,7 +259,10 @@ class API(object):
             Return:
                 Userの配列
         """
-        w = ' '.join(words) if len(words) > 1 else words[0]
+        if isinstance(words, list):
+            w = ' '.join(words) if len(words) > 1 else words[0]
+        else:
+            w = words
         res = self._get('/search/users', words=w, limit=limit, lang=lang)
         parser = ModelParser()
         return parser.parse(self, payload=res['users'], parse_type='user', payload_list=True)
@@ -292,7 +295,10 @@ class API(object):
             if search_type in ['tag', 'word']:
                 # パラメータはurlencodeされるためエンコードされるし、
                 # ' 'を'+'に変換してくれているから、空白で結合し、渡す
-                w = ' '.join(context) if len(context) > 1 else context[0]
+                if isinstance(context, list):
+                    w = ' '.join(context) if len(context) > 1 else context[0]
+                else:
+                    w = context
                 params['context'] = w
 
             elif search_type in ['category']:
