@@ -18,10 +18,10 @@ class API(object):
             Parameters:
                 - access_token - アクセストークン
                 - requsts_session - セッションオブジェクト or セッションを使うかどうか
-                - TwitcastiongApplicationBasis - (option)
+                - TwitcastiongApplicationBasis - (optional)
                     TwitcastiongApplicationBasisオブジェクト
                     (アプリケーション単位のアクセスオブジェクト)
-                - accept_encodeing - (option) レスポンスサイズが一定以上だった場合に圧縮するか
+                - accept_encodeing - (optional) レスポンスサイズが一定以上だった場合に圧縮するか
                 - requests_timeout - タイムアウト時間
         """
         self._access_token = access_token

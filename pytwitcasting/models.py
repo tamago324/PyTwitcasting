@@ -27,6 +27,7 @@ class Model(object):
 
 
 class User(Model):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-user-info """
 
     @classmethod
     def parse(cls, api, json):
@@ -42,25 +43,167 @@ class User(Model):
         return user
 
     def get_live_thumbnail_image(self, **kwargs):
+        """
+            Get Live Thumbnail Image
+            配信中のライブのサムネイル画像を取得する。
+
+            Parameters:
+                - size (optional) - 画像サイズ. 'small' or 'large'
+                - position (optional) - ライブ開始時点か最新か. 'beginning' or 'latest'
+
+            Return:
+                - dict - {'bytes_data': サムネイルの画像データ(bytes),
+                          'file_ext': ファイル拡張子('jepg' or 'png')}
+        """
         return self._api.get_live_thumbnail_image(user_id=self.id, **kwargs)
 
     def get_movies(self, **kwargs):
+        """
+            Get Movies by User
+            ユーザーが保有する過去ライブ（録画）の一覧を作成日時の降順で取得する
+
+            Parameters:
+                - offset (optional) - 先頭からの位置. min:0
+                - limit (optional) - 最大取得件数. min:1, max:50
+
+            Return:
+                - dict - {'total_count': offset,limitの条件での総件数,
+                          'movies': Movieの配列}
+        """
         return self._api.get_movies_by_user(user_id=self.id, **kwargs)
 
     def get_current_live(self):
+        """
+            Get Current Live
+            ユーザーが配信中の場合、ライブ情報を取得する
+
+            Return:
+                - dict - {'movie': Movieオブジェクト,
+                          'broadcaster': 配信者のUser,
+                          'tags': 設定されているタグの配列}
+        """
         return self._api.get_current_live(user_id=self.id)
 
     def get_supporting_status(self, id):
+        """
+            Get Supporting Status
+            ユーザーが、ある別のユーザのサポーターであるかの状態を取得する
+
+            Parameters:
+                - target_user_id - 状態を取得する対象のユーザのidかscreen_id
+
+            Return:
+                - dict - {'is_supporting': サポーターかどうか,
+                          'target_user': 対象ユーザのUser}
+        """
         return self._api.get_supporting_status(user_id=self.id, target_user_id=id)
 
     def get_supporting_list(self, **kwargs):
+        """
+            Supporting List
+            指定したユーザがサポート`している`ユーザの一覧を取得する
+
+            Parameters:
+                - offset (optional) - 先頭からの位置. min:0
+                - limit (optional) - 最大取得件数. min:1, max:20
+
+            Return:
+                - dict - {'total': 全レコード数,
+                          'users': Userの配列}
+        """
         return self._api.get_supporting_list(user_id=self.id, **kwargs)
 
     def get_supporter_list(self, **kwargs):
+        """
+            Supporting List
+            指定したユーザがサポート`している`ユーザの一覧を取得する
+
+            Parameters:
+                - offset (optional) - 先頭からの位置. min:0
+                - limit (optional) - 最大取得件数. min:1, max:20
+                - sort (optional) - 並び順. 'ranking'(貢献度順) or 'new'(新着順)
+
+            Return:
+                - dict - {'total': 全レコード数,
+                          'users': Userの配列}
+        """
         return self._api.get_supporter_list(user_id=self.id, **kwargs)
 
 
+class Supporter(User):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#supporting-list """
+    pass
+
+
+class Movie(Model):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-movie-info """
+
+    @classmethod
+    def parse(cls, api, json):
+        movie = cls(api)
+        setattr(movie, '_json', json)
+
+        for k, v in json.items():
+            if k == 'created':
+                setattr(movie, k, parse_datetime(v))
+            else:
+                setattr(movie, k, v)
+
+        return movie
+
+    def get_comments(self, **kwargs):
+        """
+            Get Comments
+            コメントを作成日時の降順で取得する
+
+            Parameters:
+                - offset (optional) - 先頭からの位置. min:0
+                - limit (optional) - 取得件数. min:1, max:50
+                - slice_id (optional) - このコメントID以降のコメントを取得する
+
+            Return:
+                - dict - {'movie_id': ライブID,
+                          'all_count': 総コメント数,
+                          'comments': Commentの配列}
+        """
+        return self._api.get_comments(movie_id=self.id, **kwargs)
+
+    def post_comment(self, comment, **kwargs):
+        """
+            Post Comment
+            コメントを投稿する。 ユーザ単位でのみ実行可能
+
+            Parameters:
+                - comment - 投稿するコメント
+                - sns (optional) - SNSへの同時投稿. 'none' or 'normal' or 'reply'
+                                 none:   SNSへ投稿しない
+                                 normal: 投稿する
+                                 reply:  配信者への返信として投稿する
+
+            Return:
+                - dict - {'movie_id': ライブID,
+                          'all_count': 総コメント数,
+                          'comment': 投稿したComment}
+        """
+        return self._api.post_comment(movie_id=self.id, comment=comment, **kwargs)
+
+    def delete_comment(self, comment_id):
+        """
+            Delete Comment
+            コメントを削除する。ユーザ単位でのみ実行可能
+            コメント投稿者か、ライブ配信者に紐づくアクセストークンであれば削除可能
+
+            Parameters:
+                - comment_id - 投稿するコメント
+
+            Return:
+                - 削除したコメントID
+        """
+        return self._api.delete_comment(movie_id=self.id, comment_id=comment_id)
+
+
 class App(Model):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#verify-credentials """
 
     @classmethod
     def parse(cls, api, json):
@@ -74,6 +217,7 @@ class App(Model):
 
 
 class Credentials():
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#verify-credentials """
 
     @classmethod
     def parse(cls, api, json):
@@ -91,32 +235,8 @@ class Credentials():
         return credentials
 
 
-class Movie(Model):
-
-    @classmethod
-    def parse(cls, api, json):
-        movie = cls(api)
-        setattr(movie, '_json', json)
-
-        for k, v in json.items():
-            if k == 'created':
-                setattr(movie, k, parse_datetime(v))
-            else:
-                setattr(movie, k, v)
-
-        return movie
-
-    def get_comments(self, **kwargs):
-        return self._api.get_comments(movie_id=self.id, **kwargs)
-
-    def post_comment(self, comment, **kwargs):
-        return self._api.post_comment(movie_id=self.id, comment=comment, **kwargs)
-
-    def delete_comment(self, comment_id):
-        return self._api.delete_comment(movie_id=self.id, comment_id=comment_id)
-
-
 class Comment(Model):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-comments """
 
     @classmethod
     def parse(cls, api, json):
@@ -135,6 +255,7 @@ class Comment(Model):
 
 
 class Category(Model):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-categories """
 
     @classmethod
     def parse(cls, api, json):
@@ -151,6 +272,7 @@ class Category(Model):
 
 
 class SubCategory(Model):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-categories """
 
     @classmethod
     def parse(cls, api, json):
@@ -164,6 +286,7 @@ class SubCategory(Model):
 
 
 class WebHook(Model):
+    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-webhook-list """
 
     @classmethod
     def parse(cls, api, json):
@@ -182,8 +305,8 @@ class WebHook(Model):
 class ModelFactory(object):
     # これを通して、parseする
     user = User
-    app = App
     movie = Movie
+    app = App
     comment = Comment
     category = Category
     sub_catetgory = SubCategory
