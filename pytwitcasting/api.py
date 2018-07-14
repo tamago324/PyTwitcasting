@@ -304,7 +304,14 @@ class API(object):
 
         res = self._get('/search/lives', args=params)
         parser = ModelParser()
-        return parser.parse(self, payload=res['movies'], parse_type='movie', payload_list=True)
+
+        for live_movie in res['movies']:
+            live_movie['movie'] = parser.parse(self, payload=live_movie['movie'],
+                                               parse_type='movie', payload_list=False)
+            live_movie['broadcaster'] = parser.parse(self, payload=live_movie['broadcaster'],
+                                                     parse_type='user', payload_list=False)
+
+        return res
 
     def get_webhook_list(self, limit=50, offset=0, user_id=None):
         """
