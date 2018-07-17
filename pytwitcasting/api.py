@@ -1,6 +1,8 @@
 import json
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from pytwitcasting.error import TwitcastingException
 from pytwitcasting.parsers import ModelParser
@@ -8,6 +10,29 @@ from pprint import pprint
 
 
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
+
+STATUS_CODES_TO_RETRY = (500)
+
+
+def requests_retry_session(retries=3,
+                           backoff_factor=0.3,
+                           status_forcelist=(500, 502, 504),
+                           session=None):
+    """ リトライ用セッションの作成 """
+
+    session = session or requests.Session()
+    # リトライオブジェクトの作成。max_retriesに渡すため
+    retry = Retry(total=retries,
+                  read=retries,
+                  connect=retries,
+                  backoff_factor=backoff_factor,
+                  status_forcelist=status_forcelist)
+
+    # urllib3の組み込みHTTPアダプタ
+    adapter = HTTPAdapter(max_retries=retry)
+    # https:// に接続アダプタを設定する
+    session.mount('https://', adapter)
+    return session
 
 
 class API(object):
@@ -30,16 +55,19 @@ class API(object):
         self.requests_timeout = requests_timeout
 
         if isinstance(requests_session, requests.Session):
-            # セッションを渡されたら、それを使う
-            self._session = requests_session
+            # Sessionオブジェクトが渡されていたら、それを使う
+            session = requests_session
         else:
-            if requests_session:
+            if requests_session is True:
                 # 新しくセッションを作る
-                self._session = requests.Session()
+                session = requests.Session()
             else:
                 # リクエストのたびに毎回セッションを生成し、閉じる(実質セッションを使っていない)
                 from requests import api
-                self._session = api
+                session = api
+
+        # リトライ用セッションの作成
+        self._session = requests_retry_session(session=session)
 
     def _auth_headers(self):
         """
@@ -130,6 +158,7 @@ class API(object):
             kwargs.update(args)
 
         # TODO:リトライ処理を入れるべき
+        # 実際にどうやって、リトライするのか調べること！！！！
 
         return self._internal_call('GET', url, payload, None, kwargs)
 
