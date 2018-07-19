@@ -11,6 +11,16 @@ from pprint import pprint
 
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
 
+"""
+APIが返すステータスコード
+200 OK
+201 Created
+400 Bad Request
+401 Unauthorized
+403 Fobidden
+404 Not Found
+500 Internal Server Error
+"""
 STATUS_CODES_TO_RETRY = (500)
 
 
