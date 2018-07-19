@@ -115,13 +115,14 @@ class API(object):
         if self.accept_encoding:
             headers['Accept-Encoding'] = 'gzip'
 
+        # リトライ処理を行ってくれる
         r = self._session.request(method, url, headers=headers, **args)
 
         try:
             r.raise_for_status()
         except:
             # len(None)だとTypeErrorになる確認してから
-            if r.text and len(r.text) > 0 and r.text != 'null':
+            if r.text and r.text != 'null':
                 err = r.json()['error']
                 # エラー内容によってdetailsがあるときとない時があるため
                 if 'details' in err:
@@ -135,15 +136,12 @@ class API(object):
             # 一応呼んでおく
             r.close()
 
-        # TODO:200以外のときはどうする？
-
-        if r.text and len(r.text) > 0 and r.text != 'null':
+        if r.text and r.text != 'null':
             if r.headers['Content-Type'] in ['image/jpeg', 'image/png']:
                 # 拡張子の取得
                 file_ext = r.headers['Content-Type'].replace('image/', '')
                 ret = {'bytes_data': r.content,
                        'file_ext': file_ext}
-                # retはどうするの
                 return ret
             else:
                 return r.json()
@@ -156,9 +154,6 @@ class API(object):
         """
         if args:
             kwargs.update(args)
-
-        # TODO:リトライ処理を入れるべき
-        # 実際にどうやって、リトライするのか調べること！！！！
 
         return self._internal_call('GET', url, payload, None, kwargs)
 
