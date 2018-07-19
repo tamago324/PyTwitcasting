@@ -1,6 +1,8 @@
 import json
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from pytwitcasting.error import TwitcastingException
 from pytwitcasting.parsers import ModelParser
@@ -8,6 +10,39 @@ from pprint import pprint
 
 
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
+
+"""
+APIが返すステータスコード
+200 OK
+201 Created
+400 Bad Request
+401 Unauthorized
+403 Fobidden
+404 Not Found
+500 Internal Server Error
+"""
+STATUS_CODES_TO_RETRY = (500)
+
+
+def requests_retry_session(retries=3,
+                           backoff_factor=0.3,
+                           status_forcelist=(500, 502, 504),
+                           session=None):
+    """ リトライ用セッションの作成 """
+
+    session = session or requests.Session()
+    # リトライオブジェクトの作成。max_retriesに渡すため
+    retry = Retry(total=retries,
+                  read=retries,
+                  connect=retries,
+                  backoff_factor=backoff_factor,
+                  status_forcelist=status_forcelist)
+
+    # urllib3の組み込みHTTPアダプタ
+    adapter = HTTPAdapter(max_retries=retry)
+    # https:// に接続アダプタを設定する
+    session.mount('https://', adapter)
+    return session
 
 
 class API(object):
@@ -30,16 +65,19 @@ class API(object):
         self.requests_timeout = requests_timeout
 
         if isinstance(requests_session, requests.Session):
-            # セッションを渡されたら、それを使う
-            self._session = requests_session
+            # Sessionオブジェクトが渡されていたら、それを使う
+            session = requests_session
         else:
-            if requests_session:
+            if requests_session is True:
                 # 新しくセッションを作る
-                self._session = requests.Session()
+                session = requests.Session()
             else:
                 # リクエストのたびに毎回セッションを生成し、閉じる(実質セッションを使っていない)
                 from requests import api
-                self._session = api
+                session = api
+
+        # リトライ用セッションの作成
+        self._session = requests_retry_session(session=session)
 
     def _auth_headers(self):
         """
@@ -87,13 +125,14 @@ class API(object):
         if self.accept_encoding:
             headers['Accept-Encoding'] = 'gzip'
 
+        # リトライ処理を行ってくれる
         r = self._session.request(method, url, headers=headers, **args)
 
         try:
             r.raise_for_status()
         except:
             # len(None)だとTypeErrorになる確認してから
-            if r.text and len(r.text) > 0 and r.text != 'null':
+            if r.text and r.text != 'null':
                 err = r.json()['error']
                 # エラー内容によってdetailsがあるときとない時があるため
                 if 'details' in err:
@@ -107,15 +146,12 @@ class API(object):
             # 一応呼んでおく
             r.close()
 
-        # TODO:200以外のときはどうする？
-
-        if r.text and len(r.text) > 0 and r.text != 'null':
+        if r.text and r.text != 'null':
             if r.headers['Content-Type'] in ['image/jpeg', 'image/png']:
                 # 拡張子の取得
                 file_ext = r.headers['Content-Type'].replace('image/', '')
                 ret = {'bytes_data': r.content,
                        'file_ext': file_ext}
-                # retはどうするの
                 return ret
             else:
                 return r.json()
@@ -128,8 +164,6 @@ class API(object):
         """
         if args:
             kwargs.update(args)
-
-        # TODO:リトライ処理を入れるべき
 
         return self._internal_call('GET', url, payload, None, kwargs)
 
