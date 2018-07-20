@@ -24,10 +24,10 @@ APIが返すステータスコード
 STATUS_CODES_TO_RETRY = (500)
 
 
-def requests_retry_session(retries=3,
-                           backoff_factor=0.3,
-                           status_forcelist=(500, 502, 504),
-                           session=None):
+def _requests_retry_session(retries=3,
+                            backoff_factor=0.3,
+                            status_forcelist=(500, 502, 504),
+                            session=None):
     """ リトライ用セッションの作成 """
 
     session = session or requests.Session()
@@ -77,7 +77,7 @@ class API(object):
                 session = api
 
         # リトライ用セッションの作成
-        self._session = requests_retry_session(session=session)
+        self._session = _requests_retry_session(session=session)
 
     def _auth_headers(self):
         """
