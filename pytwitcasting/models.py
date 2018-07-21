@@ -236,7 +236,7 @@ class Movie(Model):
 
 
 class App(Model):
-    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#verify-credentials """
+    """ アプリケーションを表すオブジェクト """
 
     @classmethod
     def parse(cls, api, json):
@@ -256,7 +256,7 @@ class App(Model):
 
 
 class Credentials():
-    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#verify-credentials """
+    """ 検証結果を表すオブジェクト """
 
     @classmethod
     def parse(cls, api, json):
@@ -281,7 +281,7 @@ class Credentials():
 
 
 class Comment(Model):
-    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-comments """
+    """ コメントを表すオブジェクト """
 
     @classmethod
     def parse(cls, api, json):
@@ -306,7 +306,7 @@ class Comment(Model):
 
 
 class Category(Model):
-    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-categories """
+    """ 配信カテゴリを表すオブジェクト """
 
     @classmethod
     def parse(cls, api, json):
@@ -329,7 +329,7 @@ class Category(Model):
 
 
 class SubCategory(Model):
-    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-categories """
+    """ 配信サブカテゴリを表すオブジェクト """
 
     @classmethod
     def parse(cls, api, json):
@@ -349,7 +349,7 @@ class SubCategory(Model):
 
 
 class WebHook(Model):
-    """ Attribute info -> http://apiv2-doc.twitcasting.tv/#get-webhook-list """
+    """ WebHookを表すオブジェクト """
 
     @classmethod
     def parse(cls, api, json):
