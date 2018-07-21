@@ -11,16 +11,6 @@ from pprint import pprint
 
 API_BASE_URL = 'https://apiv2.twitcasting.tv'
 
-"""
-APIが返すステータスコード
-200 OK
-201 Created
-400 Bad Request
-401 Unauthorized
-403 Fobidden
-404 Not Found
-500 Internal Server Error
-"""
 STATUS_CODES_TO_RETRY = (500)
 
 
@@ -46,18 +36,21 @@ def _requests_retry_session(retries=3,
 
 
 class API(object):
+    """ APIにアクセスする """
 
     def __init__(self, access_token=None, requests_session=True, application_basis=None,
                  accept_encoding=False, requests_timeout=None):
         """
-            Parameters:
-                - access_token - アクセストークン
-                - requsts_session - セッションオブジェクト or セッションを使うかどうか
-                - TwitcastiongApplicationBasis - (optional)
-                    TwitcastiongApplicationBasisオブジェクト
-                    (アプリケーション単位のアクセスオブジェクト)
-                - accept_encodeing - (optional) レスポンスサイズが一定以上だった場合に圧縮するか
-                - requests_timeout - タイムアウト時間
+        :param access_token: アクセストークン
+        :type  access_token: str
+        :param requsts_session: セッションオブジェクト or セッションを使うかどうか
+        :type  requsts_session: :class:`requests.Session <requests.Session>` or bool
+        :param application_basis: (optional) TwitcastiongApplicationBasisオブジェクト
+        :type  application_basis: :class:`TwitcastingApplicationBasis <pytwitcasting.auth.TwitcastingApplicationBasis>`
+        :param accept_encoding: (optional) レスポンスサイズが一定以上だった場合に圧縮するか
+        :type  accept_encoding: bool
+        :param requests_timeout: (optional)タイムアウト時間
+        :type  requests_timeout: int or float
         """
         self._access_token = access_token
         self.application_basis = application_basis
@@ -80,11 +73,9 @@ class API(object):
         self._session = _requests_retry_session(session=session)
 
     def _auth_headers(self):
-        """
-            認可情報がついたヘッダー情報を返す
+        """ 認可情報がついたヘッダー情報を返す
 
-            Return:
-                認可情報がついたヘッダー
+        :return: 認可情報がついたヘッダー
         """
         if self._access_token:
             return {'Authorization': f'Bearer {self._access_token}'}
@@ -94,18 +85,14 @@ class API(object):
             return {}
 
     def _internal_call(self, method, url, payload, json_data, params):
-        """
-            リクエストの送信
+        """ リクエストの送信
 
-            Parameters:
-                - method - リクエストの種類
-                - url - 送信先
-                - payload - POSTリクエストの送信データ
-                - json_data - POSTリクエストのJSONで送りたいデータ
-                - params - クエリ文字列の辞書
-
-            Return:
-                呼び出したAPIの結果
+        :param method: リクエストの種類
+        :param url: 送信先
+        :param payload: POSTリクエストの送信データ
+        :param json_data: POSTリクエストのJSONで送りたいデータ
+        :param params: クエリ文字列の辞書
+        :return: 呼び出したAPIの結果
         """
         if not url.startswith('http'):
             url = API_BASE_URL + url
@@ -159,18 +146,14 @@ class API(object):
             return None
 
     def _get(self, url, args=None, payload=None, **kwargs):
-        """
-            GETリクエスト送信
-        """
+        """ GETリクエスト送信 """
         if args:
             kwargs.update(args)
 
         return self._internal_call('GET', url, payload, None, kwargs)
 
     def _post(self, url, args=None, payload=None, json_data=None, **kwargs):
-        """
-            POSTリクエスト送信
-        """
+        """ POSTリクエスト送信 """
         if args:
             kwargs.update(args)
         return self._internal_call('POST', url, payload, json_data, kwargs)
@@ -184,40 +167,48 @@ class API(object):
         return self._internal_call('DELETE', url, payload, None, kwargs)
 
     def _put(self, url, args=None, payload=None, **kwargs):
-        """
-            PUTリクエスト送信
-        """
+        """ PUTリクエスト送信 """
         if args:
             kwargs.update(args)
         return self._internal_call('PUT', url, payload, None, kwargs)
 
     def get_user_info(self, user_id):
-        """
-            Get User Info
-            ユーザー情報を取得する
-            必須パーミッション: Read
+        """ Get User Info
 
-            Parameters:
-                - user_id - ユーザーのidかscreen_id
+        ユーザー情報を取得する
 
-            Return:
-                User
+        必須パーミッション: Read
+
+        :calls: `GET /users/:user_id <http://apiv2-doc.twitcasting.tv/#get-user-info>`_
+        :param user_id: ユーザーのidかscreen_id
+        :type user_id: str
+        :return: :class:`User <pytwitcasting.models.User>`
+        :rtype: :class:`User <pytwitcasting.models.User>`
         """
         res = self._get(f'/users/{user_id}')
         parser = ModelParser()
         return parser.parse(self, res['user'], parse_type='user', payload_list=False)
 
+    def get_movie_info(self, movie_id):
+        res = self._get(f'/movies/{movie_id}')
+        parser = ModelParser()
+        res['movie'] = parser.parse(self, payload=res['movie'], parse_type='movie', payload_list=False)
+        res['broadcaster'] = parser.parse(self, payload=res['broadcaster'], parse_type='user', payload_list=False)
+        return res
+
     def verify_credentials(self):
-        """
-            Verify Credentials
-            アクセストークンを検証し、ユーザ情報を取得する
-            必須パーミッション: Read
+        """ Verify Credentials
 
-            ※ Authorization Code GrantかImplicitでないと、エラーになる
+        アクセストークンを検証し、ユーザ情報を取得する
 
-            Return:
-                - dict - {'app': アクセストークンに紐づくApp,
-                          'user': アクセストークンに紐づくUser}
+        必須パーミッション: Read
+
+        ※ Authorization Code GrantかImplicitでないと、エラーになる
+
+        :calls: `GET /verify_credentials <http://apiv2-doc.twitcasting.tv/#verify-credentials>`_
+        :return: - ``app`` : アクセストークンに紐づく :class:`App <pytwitcasting.models.App>`
+                 - ``user`` : アクセストークンに紐づく :class:`User <pytwitcasting.models.User>`
+        :rtype: dict
         """
         res = self._get('/verify_credentials')
         parser = ModelParser()
@@ -226,17 +217,16 @@ class API(object):
         return res
 
     def support_user(self, target_user_ids):
-        """
-            Support User
-            指定したユーザーのサポーターになる
-            必須パーミッション: Write
+        """ Support User
 
-            Parameters:
-                - target_user_ids - サポーターになるユーザのidかscreen_idのリスト
-                                    1度に20人まで可能
+        指定したユーザーのサポーターになる
 
-            Return:
-                サポーター登録を行った件数
+        必須パーミッション: Write
+
+        :calls: `PUT /support <http://apiv2-doc.twitcasting.tv/#support-user>`_
+        :param target_user_ids: サポーターになるユーザのidかscreen_idのリスト。1度に20人まで可能
+        :type target_user_ids: list[str]
+        :return: サポーター登録を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
@@ -244,17 +234,16 @@ class API(object):
         return res['added_count'] if res else None
 
     def unsupport_user(self, target_user_ids):
-        """
-            Unsupport User
-            指定したユーザーのサポーターになる
-            必須パーミッション: Write
+        """ Unsupport User
 
-            Parameters:
-                - target_user_ids - サポーターを解除するユーザのidかscreen_idのリスト
-                                    1度に20人まで可能
+        指定したユーザーのサポーターになる
 
-            Return:
-                サポーター解除を行った件数
+        必須パーミッション: Write
+
+        :calls: `PUT /unsupport <http://apiv2-doc.twitcasting.tv/#unsupport-user>`_
+        :param target_user_ids: サポーターを解除するユーザのidかscreen_idのリスト。1度に20人まで可能
+        :type target_user_ids: list[str]
+        :return: サポーター解除を行った件数
         """
         # dataとして渡す
         data = {'target_user_ids': target_user_ids}
@@ -262,36 +251,38 @@ class API(object):
         return res['removed_count'] if res else None
 
     def get_categories(self, lang='ja'):
-        """
-            Get Categories
-            配信中のライブがあるカテゴリのみを取得する
-            必須パーミッション: Read
+        """ Get Categories
 
-            Parameters:
-                - lang (optional) - 検索対象の言語. 'ja' or 'en'
-                                    XXX: 構造体みたいなのないの
+        配信中のライブがあるカテゴリのみを取得する
 
-            Return:
-                Categoryオブジェクトの配列
+        必須パーミッション: Read
+
+        :calls: `GET /categories <http://apiv2-doc.twitcasting.tv/#get-categories>`_
+        :param lang: (optional) 検索対象の言語. ``ja`` or ``en``
+        :type lang: str
+        :return: :class:`Category <pytwitcasting.models.Category>` の配列
+        :rtype: list[ :class:`Category <pytwitcasting.models.Category>` ]
         """
         res = self._get('/categories', lang=lang)
         parser = ModelParser()
         return parser.parse(self, res['categories'], parse_type='category', payload_list=True)
 
     def search_users(self, words, limit=10, lang='ja'):
-        """
-            Search Users
-            ユーザを検索する
-            必須パーミッション: Read
+        """ Search Users
 
-            Parameters:
-                - words - AND検索する単語のリスト
-                - limit (optional) - 取得件数. min:1, max:50
-                - lang (optional) - 検索対象のユーザの言語設定. 現在は'ja'のみ
-                                    日本語で設定しているユーザのみ検索可能
+        ユーザを検索する
 
-            Return:
-                Userの配列
+        必須パーミッション: Read
+
+        :calls: `GET /search/users <http://apiv2-doc.twitcasting.tv/#search-users>`_
+        :param words: AND検索する単語のリスト
+        :type words: list[str]
+        :param limit: (optional) 取得件数. min: ``1`` , max: ``50``
+        :type limit: int
+        :param lang: (optional) 検索対象のユーザの言語設定. 現在は ``'ja'`` のみ。日本語で設定しているユーザのみ検索可能
+        :type lang: str
+        :return: :class:`User <pytwitcasting.models.User>` の配列
+        :rtype: list[ :class:`User <pytwitcasting.models.User>` ]
         """
         if isinstance(words, list):
             w = ' '.join(words) if len(words) > 1 else words[0]
@@ -302,44 +293,42 @@ class API(object):
         return parser.parse(self, payload=res['users'], parse_type='user', payload_list=True)
 
     def search_live_movies(self, search_type='new', context=None, limit=10, lang='ja'):
-        """
-            Search Live Movies
-            配信中のライブを検索する
-            必須パーミッション: Read
+        """ Search Live Movies
 
-            Parameters:
-                - search_type (optional) - 検索種別.
-                           'tag' or 'word' or 'category' or
-                           'new'(新着) or 'recommend'(おすすめ)
-                - context (optional) - 検索内容.search_typeの値によって決まる
-                           (required: type=tag, word, category)
-                           search_type='tag' or 'word': AND検索する単語のリスト
-                           search_type='category': サブカテゴリID
-                           search_type='new' or 'recommend': None(不要)
-                - limit (optional) - 取得件数. min:1, max:100
-                - lang (optional) - 検索対象のユーザの言語設定. 現在は'ja'のみ
+        配信中のライブを検索する
 
-            Return:
-                Movieオブジェクトの配列
-                `/movies/:movie_id`と同じ結果
+        必須パーミッション: Read
 
-            Usage::
+        :calls: `GET /search/lives <http://apiv2-doc.twitcasting.tv/#search-live-movies>`_
+        :param search_type: (optional) 検索種別。
+                            指定できる値は ``tag`` or ``word`` or ``category`` or ``new`` or ``recommend``
+        :type search_type: str
+        :param context: (optional) 検索内容. ``search_type`` の値によって決まる。詳しくはUsageを見て
+        :type context: list[str] or str or None
+        :param limit: (optional) 取得件数. min: ``1`` , max: ``100``
+        :type limit: int
+        :param lang: (optional) 検索対象のユーザの言語設定. 現在は ``ja`` のみ
+        :type lang: str
+        :return: :class:`Movie <pytwitcasting.models.Movie>` の配列
+        :rtype: list[ :class:`Movie <pytwitcasting.models.Movie>` ]
 
-                ex1) search_type='tag'.(context required)
-                >>> movies = api.search_live_movies(search_type='tag', context=['人気', '雑談'])
+        Usage::
 
-                ex2) search_type='word'.(context required)
-                >>> movies = api.search_live_movies(search_type='word', context=['ツイキャス', 'ゲーム'])
+          # ex1) search_type='tag'.(context required)
+          >>> movies = api.search_live_movies(search_type='tag', context=['人気', '雑談'])
 
-                ex3) search_type='category'.(context required)
-                     API.get_categories()で取得できるSubCategoryクラスの`id`を指定
-                >>> movies = api.search_live_movies(search_type='category', context='hobby_game_boys_jp')
+          # ex2) search_type='word'.(context required)
+          >>> movies = api.search_live_movies(search_type='word', context=['ツイキャス', 'ゲーム'])
 
-                ex4) search_type='new'.(context none)
-                >>> movies = api.search_live_movies(search_type='new')
+          # ex3) search_type='category'.(context required).
+          #      API.get_categories()で取得できるSubCategoryクラスの`id`を指定
+          >>> movies = api.search_live_movies(search_type='category', context='hobby_game_boys_jp')
 
-                ex4) search_type='recommend'.(context none)
-                >>> movies = api.search_live_movies(search_type='recommend')
+          # ex4) search_type='new'.(context none)
+          >>> movies = api.search_live_movies(search_type='new')
+
+          # ex4) search_type='recommend'.(context none)
+          >>> movies = api.search_live_movies(search_type='recommend')
         """
         params = {'type': search_type, 'limit': limit, 'lang': lang}
 
@@ -373,24 +362,24 @@ class API(object):
         return res
 
     def get_webhook_list(self, limit=50, offset=0, user_id=None):
-        """
-            Get WebHook List
-            アプリケーションに紐づく WebHook の一覧を取得する
-            *******************************************
-            *アプリケーション単位でのみ実行可能(Basic)*
-            *******************************************
-            必須パーミッション: any
+        """ Get WebHook List
 
-            Parameters:
-                - limit - 取得件数. min:1, max:100
-                - offset - 先頭からの位置. min:0
-                - user_id - 対象のユーザのidかscreen_id
+        アプリケーションに紐づく WebHook の一覧を取得する
 
-                limitとoffsetはuser_idがNoneのときのみ指定できる
+        *アプリケーション単位でのみ実行可能(Basic)*
 
-            Return:
-                - dict - {'all_count': このアプリに登録済みWebHook件数,
-                          'webhooks': WebHookの配列}
+        必須パーミッション: any
+
+        :calls: `GET /webhooks <http://apiv2-doc.twitcasting.tv/#get-webhook-list>`_
+        :param limit: 取得件数. min: ``1`` , max: ``100``
+        :type limit: int
+        :param offset: 先頭からの位置. min: ``0``
+        :type offset: int
+        :param user_id: 対象のユーザのidかscreen_id。imitとoffsetはuser_idが ``None`` のときのみ指定できる
+        :type user_id: str or None
+        :return: - ``all_count`` : このアプリに登録済みWebHook件数
+                 - ``webhooks`` : WebHookの配列
+        :rtype: dict
         """
         params = {}
         if user_id:
@@ -406,125 +395,77 @@ class API(object):
         return res
 
     def register_webhook(self, user_id, events):
-        """
-            Register WebHook
-            WebHookを新規登録します
-            これを使うには、アプリケーションでWebHook URLの登録が必須
-            必須パーミッション: any
+        """ Register WebHook
 
-            Parameters:
-                - user_id - 対象のユーザのid
-                - events - フックするイベント種別の配列
-                            'livestart', 'liveend'
+        WebHookを新規登録します。これを使うには、アプリケーションでWebHook URLの登録が必須。
 
-            Return:
-                - dict - {'user_id': 登録したユーザのid,
-                          'added_events': 登録したイベントの種類の配列}
+        必須パーミッション: any
+
+        :calls: `POST /webhooks <http://apiv2-doc.twitcasting.tv/#register-webhook>`_
+        :param user_id: 対象のユーザのid
+        :type user_id: str
+        :param events: フックするイベント種別の配列。 ``livestart`` or ``liveend``
+        :type events: list[str]
+        :return: - ``user_id`` : 登録したユーザのid
+                 - ``added_events`` : 登録したイベントの種類の配列
+        :rtype: dict
         """
         data = {'user_id': user_id, 'events': events}
         # そのまま渡す
         return self._post('/webhooks', json_data=data)
 
     def remove_webhook(self, user_id, events):
-        """
-            Remove WebHook
-            WebHookを削除する
-            必須パーミッション: any
+        """ Remove WebHook
 
-            Parameters:
-                - user_id - 対象のユーザのid
-                - events - フックを削除するイベント種別の配列
-                            'livestart', 'liveend'
+        WebHookを削除する
 
-            Return:
-                - dict - {'user_id': 登録したユーザのid,
-                          'removed_events': 削除されたイベントの種類の配列}
+        必須パーミッション: any
+
+        :calls: `DELETE /webhooks <http://apiv2-doc.twitcasting.tv/#remove-webhook>`_
+        :param user_id: 対象のユーザのid
+        :type user_id: str
+        :param events: フックを削除するイベント種別の配列。 ``livestart`` or ``liveend``
+        :type events: list[str]
+        :return: - ``user_id`` : 登録したユーザのid
+                 - ``removed_events`` : 削除されたイベントの種類の配列
+        :rtype: dict
         """
         params = {'user_id': user_id, 'events[]': events}
         return self._del('/webhooks', args=params)
 
     def get_rtmp_url(self):
-        """
-            Get RTMP Url
-            アクセストークンに紐づくユーザの配信用のURL(RTMP)を取得する
-            *******************************
-            *必須パーミッション: Broadcast*
-            *******************************
+        """ Get RTMP Url
 
-            Return:
-                - dict - {'enabled': RTMP配信が有効かどうか,
-                          'url': RTMP配信用URL,
-                          'stream_key': RTMP配信用キー}
+        アクセストークンに紐づくユーザの配信用のURL(RTMP)を取得する
+
+        必須パーミッション: *Broadcast*
+
+        :calls: `GET /rtmp_url <http://apiv2-doc.twitcasting.tv/#get-rtmp-url>`_
+        :return: - ``enabled`` : RTMP配信が有効かどうか
+                 - ``url`` : RTMP配信用URL
+                 - ``stream_key`` : RTMP配信用キー
+        :rtype: dict
         """
         return self._get('/rtmp_url')
 
     def get_webm_url(self):
-        """
-            Get WebM Url
-            アクセストークンに紐づくユーザの配信用のURL (WebM, WebSocket)を取得する
-            *******************************
-            *必須パーミッション: Broadcast*
-            *******************************
+        """ Get WebM Url
 
-            Return:
-                - dict - {'enabled': WebM配信が有効かどうか,
-                          'url': WebM配信用URL}
+        アクセストークンに紐づくユーザの配信用のURL (WebM, WebSocket)を取得する
+
+        必須パーミッション: *Broadcast*
+
+        :calls: `GET /webm_url <http://apiv2-doc.twitcasting.tv/#get-webm-url>`_
+        :return: - ``enabled`` : WebM配信が有効かどうか
+                 - ``url`` : WebM配信用URL
         """
         # (WebMってなに！？)
         return self._get('/webm_url')
 
-    def get_live_thumbnail_image(self, user_id, size='small', position='latest'):
-        """
-            Get Live Thumbnail Image
-            配信中のライブのサムネイル画像を取得する。
-            必須パーミッション: Read
-
-            Parameters:
-                - user_id - ユーザーのidかscreen_id
-                - size - 画像サイズ. 'small' or 'large'
-                - position - ライブ開始時点か最新か. 'beginning' or 'latest'
-
-            Return:
-                - dict - {'bytes_data': サムネイルの画像データ(bytes),
-                          'file_ext': ファイル拡張子('jepg' or 'png')}
-        """
+    def _get_live_thumbnail_image(self, user_id, size='small', position='latest'):
         return self._get(f'/users/{user_id}/live/thumbnail', size=size, position=position)
 
-    def get_movie_info(self, movie_id):
-        """
-            Get Movie Info
-            ライブ（録画）情報を取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - movie_id - ライブID
-
-            Return:
-                - dict - {'movie': Movie,
-                          'broadcaster': 配信者のUser,
-                          'tags': 設定されているタグの配列}
-        """
-        res = self._get(f'/movies/{movie_id}')
-        parser = ModelParser()
-        res['movie'] = parser.parse(self, payload=res['movie'], parse_type='movie', payload_list=False)
-        res['broadcaster'] = parser.parse(self, payload=res['broadcaster'], parse_type='user', payload_list=False)
-        return res
-
-    def get_movies_by_user(self, user_id, offset=0, limit=20):
-        """
-            Get Movies by User
-            ユーザーが保有する過去ライブ（録画）の一覧を作成日時の降順で取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - user_id - ユーザーのidかscreen_id
-                - offset - 先頭からの位置. min:0
-                - limit - 最大取得件数. min:1, max:50
-
-            Return:
-                - dict - {'total_count': offset,limitの条件での総件数,
-                          'movies': Movieの配列}
-        """
+    def _get_movies_by_user(self, user_id, offset=0, limit=20):
         res = self._get(f'/users/{user_id}/movies', offset=offset, limit=limit)
         # 配列からMovieクラスの配列を作る
         parser = ModelParser()
@@ -532,20 +473,7 @@ class API(object):
 
         return res
 
-    def get_current_live(self, user_id):
-        """
-            Get Current Live
-            ユーザーが配信中の場合、ライブ情報を取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - user_id - ユーザーのidかscreen_id
-
-            Return:
-                - dict - {'movie': Movieオブジェクト,
-                          'broadcaster': 配信者のUser,
-                          'tags': 設定されているタグの配列}
-        """
+    def _get_current_live(self, user_id):
         # TODO: ライブ中ではない場合、エラーを返すでよいのか
         res = self._get(f'/users/{user_id}/current_live')
         parser = ModelParser()
@@ -553,23 +481,7 @@ class API(object):
         res['broadcaster'] = parser.parse(self, res['broadcaster'], parse_type='user', payload_list=False)
         return res
 
-    def get_comments(self, movie_id, offset=0, limit=10, slice_id=None):
-        """
-            Get Comments
-            コメントを作成日時の降順で取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - movie_id - ライブID
-                - offset - 先頭からの位置. min:0
-                - limit - 取得件数. min:1, max:50
-                - slice_id - このコメントID以降のコメントを取得する
-
-            Return:
-                - dict - {'movie_id': ライブID,
-                          'all_count': 総コメント数,
-                          'comments': Commentの配列}
-        """
+    def _get_comments(self, movie_id, offset=0, limit=10, slice_id=None):
         params = {'offset': offset, 'limit': limit}
 
         if slice_id:
@@ -581,103 +493,30 @@ class API(object):
 
         return res
 
-    def post_comment(self, movie_id, comment, sns='none'):
-        """
-            Post Comment
-            コメントを投稿する。 ユーザ単位でのみ実行可能
-            必須パーミッション: Write
-
-            Parameters:
-                - movie_id - ライブID
-                - comment - 投稿するコメント
-                - sns - SNSへの同時投稿. 'none' or 'normal' or 'reply'
-                        none: SNSへ投稿しない
-                        normal: 投稿する
-                        reply: 配信者への返信として投稿する
-
-            Return:
-                - dict - {'movie_id': ライブID,
-                          'all_count': 総コメント数,
-                          'comment': 投稿したComment}
-        """
+    def _post_comment(self, movie_id, comment, sns='none'):
         data = {'comment': comment, 'sns': sns}
         res = self._post(f'/movies/{movie_id}/comments', payload=data)
         parser = ModelParser()
         res['comment'] = parser.parse(self, res['comment'], parse_type='comment', payload_list=False)
         return res
 
-    def delete_comment(self, movie_id, comment_id):
-        """
-            Delete Comment
-            コメントを削除する。ユーザ単位でのみ実行可能
-            コメント投稿者か、ライブ配信者に紐づくアクセストークンであれば削除可能
-            必須パーミッション: Write
-
-            Parameters:
-                - movie_id - ライブID
-                - comment_id - 投稿するコメント
-
-            Return:
-                - 削除したコメントID
-        """
+    def _delete_comment(self, movie_id, comment_id):
         res = self._del(f'/movies/{movie_id}/comments/{comment_id}')
         return res['comment_id']
 
-    def get_supporting_status(self, user_id, target_user_id):
-        """
-            Get Supporting Status
-            ユーザーが、ある別のユーザのサポーターであるかの状態を取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - user_id - ユーザのidかscreen_id
-                - target_user_id - 状態を取得する対象のユーザのidかscreen_id
-
-            Return:
-                - dict - {'is_supporting': サポーターかどうか,
-                          'target_user': 対象ユーザのUser}
-        """
+    def _get_supporting_status(self, user_id, target_user_id):
         res = self._get(f'/users/{user_id}/supporting_status', target_user_id=target_user_id)
         parser = ModelParser()
         res['target_user'] = parser.parse(self, res['target_user'], parse_type='user', payload_list=False)
         return res
 
-    def get_supporting_list(self, user_id, offset=0, limit=20):
-        """
-            Supporting List
-            指定したユーザがサポート`している`ユーザの一覧を取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - user_id - ユーザのidかscreen_id
-                - offset - 先頭からの位置. min:0
-                - limit - 最大取得件数. min:1, max:20
-
-            Return:
-                - dict - {'total': 全レコード数,
-                          'users': Userの配列}
-        """
+    def _get_supporting_list(self, user_id, offset=0, limit=20):
         res = self._get(f'/users/{user_id}/supporting', offset=offset, limit=limit)
         parser = ModelParser()
         res['supporting'] = parser.parse(self, res['supporting'], parse_type='user', payload_list=True)
         return res
 
-    def get_supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
-        """
-            Supporting List
-            指定したユーザがサポート`している`ユーザの一覧を取得する
-            必須パーミッション: Read
-
-            Parameters:
-                - user_id - ユーザのidかscreen_id
-                - offset - 先頭からの位置. min:0
-                - limit - 最大取得件数. min:1, max:20
-                - sort - 並び順. 'ranking'(貢献度順) or 'new'(新着順)
-
-            Return:
-                - dict - {'total': 全レコード数,
-                          'users': Userの配列}
-        """
+    def _get_supporter_list(self, user_id, offset=0, limit=20, sort='ranking'):
         res = self._get(f'/users/{user_id}/supporters', offset=offset, limit=limit, sort=sort)
         parser = ModelParser()
         res['supporters'] = parser.parse(self, res['supporters'], parse_type='user', payload_list=True)
