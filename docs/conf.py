@@ -42,6 +42,7 @@ release = ''
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -159,3 +160,13 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+
+# ~~ autodoc ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# classのメンバの表示順をソースの順番にする
+autodoc_member_order = 'bysource'
+# __init__ のドキュメントも生成
+autoclass_content = 'both'
+
+# ~~ intersphinx ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+intersphinx_mapping = {'requests': ('http://docs.python-requests.org/en/master', None)}
