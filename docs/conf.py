@@ -167,6 +167,8 @@ texinfo_documents = [
 autodoc_member_order = 'bysource'
 # __init__ のドキュメントも生成
 autoclass_content = 'both'
+# 自動で追加するフラグ
+autodoc_default_flags = ['inherited-members']
 
 # ~~ intersphinx ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 intersphinx_mapping = {'requests': ('http://docs.python-requests.org/en/master', None)}
