@@ -152,7 +152,7 @@ class TwitcastingOauth(object):
     def __init__(self, client_id, client_secret, redirect_uri, state=None):
         """
         :param client_id: ClientID
-        :tyie client_id: str
+        :type client_id: str
         :param client_secret: ClientSecret
         :type client_secret: str
         :param redirect_uri: リダイレクト先(Callback URL)
@@ -165,7 +165,7 @@ class TwitcastingOauth(object):
         self.redirect_uri = redirect_uri
         self.state = state
 
-    def get_authorize_url(self, client_id, state=None):
+    def get_authorize_url(self, state=None):
         """ 認可のためのURLを取得
 
         :param state: CSRFトークン
