@@ -14,6 +14,9 @@
 #
 import os
 import sys
+import glob
+import re
+
 # sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -172,3 +175,70 @@ autodoc_default_flags = ['inherited-members']
 
 # ~~ intersphinx ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 intersphinx_mapping = {'requests': ('http://docs.python-requests.org/en/master', None)}
+
+
+# ~~ API一覧を生成 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+PROJECT_NAME = 'pytwitcasting'
+
+# APIs用のモジュール一覧
+modules = [
+    fileName[17:-3]
+    for fileName in sorted(glob.glob(f'../{PROJECT_NAME}/*.py'))
+    if fileName not in [
+            f'../{PROJECT_NAME}/__init__.py',
+            f'../{PROJECT_NAME}/__version__.py',
+            f'../{PROJECT_NAME}/auth.py',
+            f'../{PROJECT_NAME}/error.py',
+            f'../{PROJECT_NAME}/parsers.py',
+            f'../{PROJECT_NAME}/utils.py',
+    ]
+]
+
+methods = dict()
+
+# '_hoge'は省くため
+ignore_pattern = re.compile(r'^_.*')
+
+for module in modules:
+    with open(f'../{PROJECT_NAME}/{module}.py', 'r') as f:
+        methodName = None
+        className = None
+        for line in f:
+            # クラス名
+            if line.startswith('class '):
+                className = line.split('(')[0][6:]
+                # print(f'{PROJECT_NAME}.{module}.{className}')
+
+            # メソッド名
+            if line.startswith('    def '):
+                methodName = line.split('(')[0][8:]
+                if re.search(ignore_pattern, methodName):
+                    # '_get_comments' とかは無視する
+                    methodName = None
+                    continue
+
+            # 呼び出しURL
+            if line.startswith('        :calls: `'):
+                # 'GET', 'http://example.com' みたいな
+                verb, url = line[17:].split(' ')[0:2]
+                if url not in methods:
+                    methods[url] = dict()
+                if verb not in methods[url]:
+                    methods[url][verb] = set()
+
+                methods[url][verb].add(f':meth:`{className}.{methodName} <{PROJECT_NAME}.{module}.{className}.{methodName}>`')
+
+            method = None
+
+# api一覧を生成
+with open('apis.rst', 'w') as apis:
+    apis.write('APIs\n')
+    apis.write('====\n')
+    apis.write('\n')
+    for url, verbs in sorted(methods.items()):
+        apis.write(f'* ``{url}``\n')
+        apis.write('\n')
+        for verb in ['GET', 'PATCH', 'POST', 'PUT', 'DELETE']:
+            if verb in verbs:
+                apis.write(f'  * {verb}: ' + ' or '.join(sorted(verbs[verb])) + '\n')
+                apis.write('\n')

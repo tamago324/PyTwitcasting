@@ -10,6 +10,7 @@ Welcome to PyTwitcasting's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   apis
    reference
 
 
