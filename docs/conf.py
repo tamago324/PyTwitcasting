@@ -183,8 +183,7 @@ PROJECT_NAME = 'pytwitcasting'
 # APIs用のモジュール一覧
 modules = [
     fileName[17:-3]
-    for fileName in sorted(glob.glob(f'../{PROJECT_NAME}/*.py'))
-    if fileName not in [
+    for fileName in sorted(glob.glob(f'../{PROJECT_NAME}/*.py')) if fileName not in [
             f'../{PROJECT_NAME}/__init__.py',
             f'../{PROJECT_NAME}/__version__.py',
             f'../{PROJECT_NAME}/auth.py',
