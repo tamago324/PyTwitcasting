@@ -65,4 +65,3 @@ WebHook object
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: pytwitcasting.models.WebHook
-
