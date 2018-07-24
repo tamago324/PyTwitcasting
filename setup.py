@@ -15,7 +15,7 @@ setuptools.setup(
     name='pytwitcasting',
     version=about['__version__'],
     author='tamago324',
-    author_email='tamago_pad@yahoo.co.jp',
+    author_email='tamago324.tky@gmail.com',
     description='TwitcastingのAPI2(β)のライブラリ',
     long_description=long_description,
     long_description_content_type='text/markdown',
