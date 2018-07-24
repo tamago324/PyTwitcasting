@@ -11,21 +11,18 @@ OAUTH_TOKEN_URL = 'https://apiv2.twitcasting.tv/oauth2/access_token'
 OAUTH_BASE_URL = 'https://apiv2.twitcasting.tv/oauth2/authorize'
 
 
-def _get_authorize_url(self, client_id, state):
+def _get_authorize_url(client_id, response_type, state=None):
     """ 認可のためのURLを取得
 
     :param client_id: ClientID
-    :type client_id: str
+    :param response_type: code or token
     :param state: CSRFトークン
-    :type state: str
     :return: 認可するためのURL
     :rtype: str
     """
     payload = {'client_id': client_id,
-               'response_type': 'code'}
+               'response_type': response_type}
 
-    if state is None:
-        state = self.state
     if state is not None:
         payload['state'] = state
 
@@ -58,7 +55,7 @@ class TwitcastingImplicit(object):
         :return: 認可するためのURL
         :rtype: str
         """
-        return _get_authorize_url(self.client_id, state)
+        return _get_authorize_url(client_id=self.client_id, response_type='token', state=state)
 
     def get_access_token(self, url):
         """ 認可後にリダイレクトしたURLから認可情報を解析し取り出す
@@ -173,7 +170,7 @@ class TwitcastingOauth(object):
         :return: 認可するためのURL
         :rtype: str
         """
-        return _get_authorize_url(self.client_id, state)
+        return _get_authorize_url(client_id=self.client_id, response_type='code', state=state)
 
     def parse_response_code(self, url):
         """ 認可後にリダイレクトしたURLから認可情報を解析し取り出す
