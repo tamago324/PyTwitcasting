@@ -10,14 +10,26 @@ from pytwitcasting.auth import (
 )
 
 
-def parse_datetime(string):
-    return datetime.fromtimestamp(string)
+def parse_datetime(unix_time):
+    """ UNIX時間をdatetimeに変換
+
+    :param unix_time: UNIX時間の文字列
+    :type unix_time: str
+    :return: datetimeの時間
+    :rtype: :class:`datetime.datetime`
+    """
+    return datetime.fromtimestamp(unix_time)
 
 
 def get_access_token_prompt_implicit(client_id=None):
-    """
-    Implicit authorization flow
-    http://apiv2-doc.twitcasting.tv/#implicit
+    """ `Implicit authorization flow <http://apiv2-doc.twitcasting.tv/#implicit>`_ での認証
+
+    Implicitで認証するサンプルコード
+
+    :param client_id: (optional) ClientID
+    :type client_id: str
+    :return: アクセストークン
+    :rtype: str
     """
 
     if not client_id:
@@ -45,9 +57,20 @@ def get_access_token_prompt_implicit(client_id=None):
 
 
 def get_access_token_prompt_oauth(client_id=None, client_secret=None, redirect_uri=None, state=None):
-    """
-    Authorization Code Grant flow
-    http://apiv2-doc.twitcasting.tv/#authorization-code-grant
+    """ `Authorization Code Grant flow <http://apiv2-doc.twitcasting.tv/#authorization-code-grant>`_ での認証
+
+    Authorization Codeで認証するサンプルコード
+
+    :param client_id: (optional) ClientID
+    :type client_id: str
+    :param client_secret: (optional) ClientSecret
+    :type client_secret: str
+    :param redirect_uri: (optional) リダイレクトURL(CallBack URL)
+    :type redirect_uri: str
+    :param state: (optional) CRCFトークン
+    :type state: str
+    :return: アクセストークン
+    :rtype: str
     """
     if not client_id:
         client_id = os.environ['TWITCASTING_CLIENT_ID']

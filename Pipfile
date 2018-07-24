@@ -9,3 +9,5 @@ requests = "*"
 [dev-packages]
 twine = "*"
 pytest-sugar = "*"
+sphinx = "*"
+sphinx-rtd-theme = "*"
