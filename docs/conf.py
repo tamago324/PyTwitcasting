@@ -183,14 +183,14 @@ PROJECT_NAME = 'pytwitcasting'
 # APIs用のモジュール一覧
 modules = [
     fileName[17:-3]
-    for fileName in sorted(glob.glob(f'../{PROJECT_NAME}/*.py'))
+    for fileName in sorted(glob.glob('../' + PROJECT_NAME + '/*.py'))
     if fileName not in [
-            f'../{PROJECT_NAME}/__init__.py',
-            f'../{PROJECT_NAME}/__version__.py',
-            f'../{PROJECT_NAME}/auth.py',
-            f'../{PROJECT_NAME}/error.py',
-            f'../{PROJECT_NAME}/parsers.py',
-            f'../{PROJECT_NAME}/utils.py',
+            '../' + PROJECT_NAME + '/__init__.py',
+            '../' + PROJECT_NAME + '/__version__.py',
+            '../' + PROJECT_NAME + '/auth.py',
+            '../' + PROJECT_NAME + '/error.py',
+            '../' + PROJECT_NAME + '/parsers.py',
+            '../' + PROJECT_NAME + '/utils.py',
     ]
 ]
 
@@ -200,14 +200,13 @@ methods = dict()
 ignore_pattern = re.compile(r'^_.*')
 
 for module in modules:
-    with open(f'../{PROJECT_NAME}/{module}.py', 'r') as f:
+    with open('../' + PROJECT_NAME + '/' + module + '.py', 'r') as f:
         methodName = None
         className = None
         for line in f:
             # クラス名
             if line.startswith('class '):
                 className = line.split('(')[0][6:]
-                # print(f'{PROJECT_NAME}.{module}.{className}')
 
             # メソッド名
             if line.startswith('    def '):
@@ -226,7 +225,7 @@ for module in modules:
                 if verb not in methods[url]:
                     methods[url][verb] = set()
 
-                methods[url][verb].add(f':meth:`{className}.{methodName} <{PROJECT_NAME}.{module}.{className}.{methodName}>`')
+                methods[url][verb].add(':meth:`' + className + '.' + methodName + ' <' + PROJECT_NAME + '.' + module + '.' + className + '.' + methodName + '>`')
 
             method = None
 
@@ -236,9 +235,9 @@ with open('apis.rst', 'w') as apis:
     apis.write('====\n')
     apis.write('\n')
     for url, verbs in sorted(methods.items()):
-        apis.write(f'* ``{url}``\n')
+        apis.write('* ``' + url + '``\n')
         apis.write('\n')
         for verb in ['GET', 'PATCH', 'POST', 'PUT', 'DELETE']:
             if verb in verbs:
-                apis.write(f'  * {verb}: ' + ' or '.join(sorted(verbs[verb])) + '\n')
+                apis.write('  * ' + verb + ': ' + ' or '.join(sorted(verbs[verb])) + '\n')
                 apis.write('\n')
